@@ -1,0 +1,36 @@
+name: Build Debian Package
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./NAVFIT26
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: './NAVFIT26/package.json'
+
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+
+      - name: Install and Build
+        run: |
+          npm run install-all
+          npm run dist
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NAVFIT26-Installer
+          path: NAVFIT26/dist/*.deb

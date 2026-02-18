@@ -1,0 +1,32 @@
+{
+  "name": "navfit26",
+  "version": "1.0.0",
+  "description": "NAVFIT26 Master Launcher",
+  "main": "electron2.1/main.js",
+  "scripts": {
+    "install-all": "npm install && cd frontend2.1 && npm install && cd ../electron2.1 && npm install",
+    "build-ui": "cd frontend2.1 && npm run build",
+    "dist": "npm run build-ui && electron-builder --linux deb",
+    "postinstall": "electron-builder install-app-deps",
+    "start": "npm run build-ui && cd electron2.1 && npm start"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.6"
+  },
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.navfit26.app",
+    "files": [
+      "electron2.1/**/*",
+      "frontend2.1/dist/**/*",
+      "backend2.1/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": ["deb"]
+    }
+  }
+}

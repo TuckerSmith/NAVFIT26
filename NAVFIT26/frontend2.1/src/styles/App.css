@@ -1,0 +1,95 @@
+.navfit-paper {
+  width: 900px;
+  margin: auto;
+  background: white;
+  border: 2px solid black;
+  font-family: sans-serif;
+  color: #000;
+}
+
+.navfit-row { display: flex; border-bottom: 1px solid black; }
+
+.navfit-cell { 
+  border-right: 1px solid black; 
+  padding: 4px; 
+  display: flex; 
+  flex-direction: column; 
+  flex: 1; /* Automatically sizes boxes evenly */
+}
+
+.navfit-paper {
+  width: 95%;          /* Takes up most of the screen width */
+  max-width: 950px;    /* But won't get huge on a 4K monitor */
+  margin: 20px auto;
+  background: white;
+  border: 2px solid black;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box; /* Includes border in the width calculation */
+}
+
+/* Add this to ensure inputs don't break the layout when scaling */
+* {
+  box-sizing: border-box;
+}
+
+.navfit-cell:last-child { border-right: none; }
+
+.navfit-cell label { font-size: 10px; font-weight: bold; }
+
+.navfit-cell input { 
+  border: none; 
+  font-family: "Courier New", monospace; 
+  outline: none; 
+}
+
+.navfit-grid-header, .navfit-grid-row {
+  display: grid;
+  grid-template-columns: 1fr 60px 50px 50px 50px 50px 50px;
+  border-bottom: 1px solid black;
+  align-items: center;
+}
+
+.trait-info-cell { text-align: left; padding: 5px; border-right: 1px solid black; }
+
+.section-top {
+  border-top: 2px solid black !important;
+}
+
+.navfit-textarea {
+  font-family: "Courier New", Courier, monospace !important;
+  font-variant-ligatures: none; /* Keeps it looking like a typewriter */
+}
+
+/* patterned blackout */
+.blackout-pattern {
+  background: repeating-linear-gradient(
+    45deg,
+    #000,
+    #000 2px,
+    #333 2px,
+    #333 4px
+  );
+}
+
+.navfit-cell {
+  border-right: 1px solid black;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  /* CRITICAL: This keeps the "Date:" text inside this specific box */
+  position: relative; 
+  min-height: 50px; /* Gives the signature box some height */
+}
+
+.date-label {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 7px;
+  font-weight: bold;
+  color: #000;
+  pointer-events: none;
+  z-index: 10; /* Ensures it stays on top of the input */
+}

@@ -1,0 +1,19 @@
+# Dependency directories
+node_modules/
+
+# Build outputs
+dist/
+frontend2.1/dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Database files (if you don't want to sync local dev data)
+*.sqlite
+*.db
