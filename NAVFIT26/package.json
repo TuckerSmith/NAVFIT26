@@ -11,7 +11,7 @@
     "start": "npm run build-ui && cd electron2.1 && npm start"
   },
   "dependencies": {
-    "sqlite3": "^5.1.6"
+    "better-sqlite3": "^11.0.0"
   },
   "devDependencies": {
     "electron": "^25.0.0",
