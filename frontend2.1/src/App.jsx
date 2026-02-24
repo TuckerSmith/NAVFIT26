@@ -14,63 +14,279 @@ export const FITREP_CONFIG = {
 /** * SUB-COMPONENT: PerformanceRow
  * This replicates the boxed 33-39 rows from NAVFIT98
  */
-const PerformanceRow = ({ label, subLabel, name, value, setter }) => (
+const PerformanceRow = ({ label, subLabel, name, value, setter, standards }) => (
   <div className="navfit-row" style={{ display: 'flex', borderBottom: '1px solid black' }}>
     
-    {/* TRAIT DESCRIPTION + NOB BOX */}
-    <div className="navfit-cell" style={{ 
-      flex: 1, // Matches the 'PERFORMANCE TRAITS' header flex
-      display: 'flex', 
-      flexDirection: 'row', 
-      justifyContent: 'space-between', 
-      alignItems: 'center',
-      padding: '4px'
-    }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 'bold', fontSize: '10px' }}>{label}</div>
-        <div style={{ fontSize: '8px', color: '#444', lineHeight: '1' }}>{subLabel}</div>
-      </div>
+    {/* LEFT COLUMN: TRAIT & NOB */}
+    <div className="navfit-cell" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '4px' }}>
+      <div style={{ fontWeight: 'bold', fontSize: '9px' }}>{label}</div>
+      <div style={{ fontSize: '7px', color: '#444', marginBottom: '4px' }}>{subLabel}</div>
       
-      {/* THE NOB MINI-BOX */}
+      {/* NOB Button pushed to bottom-right of this cell */}
       <div style={{ 
-        borderLeft: '1px solid black', 
-        paddingLeft: '5px', 
-        marginLeft: '5px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center'
+        marginTop: 'auto', 
+        alignSelf: 'flex-end', 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '3px' 
       }}>
         <label style={{ fontSize: '7px', fontWeight: 'bold' }}>NOB</label>
-        <input 
-          type="radio" 
-          name={name} 
-          value="NOB" 
-          checked={value === 'NOB'} 
-          onChange={(e) => setter(e.target.value)} 
-        />
+        <input type="radio" name={name} value="NOB" checked={value === 'NOB'} onChange={(e) => setter(e.target.value)} />
       </div>
     </div>
 
-    {/* SCORE COLUMNS (Flex ratios matching your header) */}
-    <div className="navfit-cell" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-      <input type="radio" name={name} value="1.0" checked={value === "1.0"} onChange={(e) => setter(e.target.value)} />
-    </div>
-    <div className="navfit-cell" style={{ flex: 0.5, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-      <input type="radio" name={name} value="2.0" checked={value === "2.0"} onChange={(e) => setter(e.target.value)} />
-    </div>
-    <div className="navfit-cell" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-      <input type="radio" name={name} value="3.0" checked={value === "3.0"} onChange={(e) => setter(e.target.value)} />
-    </div>
-    <div className="navfit-cell" style={{ flex: 0.5, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-      <input type="radio" name={name} value="4.0" checked={value === "4.0"} onChange={(e) => setter(e.target.value)} />
-    </div>
-    <div className="navfit-cell" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-      <input type="radio" name={name} value="5.0" checked={value === "5.0"} onChange={(e) => setter(e.target.value)} />
-    </div>
+    {/* SCORE COLUMNS (1.0 - 5.0) */}
+    {[
+      { val: "1.0", flex: 1, text: standards?.s1 },
+      { val: "2.0", flex: 0.5, text: "" },
+      { val: "3.0", flex: 1, text: standards?.s3 },
+      { val: "4.0", flex: 0.5, text: "" },
+      { val: "5.0", flex: 1, text: standards?.s5 }
+    ].map((col, idx) => (
+      <div key={idx} className="navfit-cell" style={{ 
+        flex: col.flex, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        padding: '2px',
+        backgroundColor: idx % 2 === 0 ? '#fff' : '#f9f9f9',
+        minHeight: '80px' // Ensures consistent height across the row
+      }}>
+        {/* Standard Text stays at the top */}
+        <div style={{ fontSize: '9px', lineHeight: '1.1', textAlign: 'left', width: '100%' }}>
+          {Array.isArray(col.text) 
+            ? col.text.map((line, i) => <div key={i}>{line}</div>) 
+            : col.text}
+        </div>
+        
+        {/* Radio Button pushed to bottom-right of this cell */}
+        <div style={{ marginTop: 'auto', alignSelf: 'flex-end' }}>
+          <input 
+            type="radio" 
+            name={name} 
+            value={col.val} 
+            checked={value === col.val} 
+            onChange={(e) => setter(e.target.value)} 
+          />
+        </div>
+      </div>
+    ))}
   </div>
 );
+const TRAIT_STANDARDS = {
+  proExpert: {
+    s1: [
+      "-Lacks basic professional knowledge to",
+      " perform effectively",
+      "-Cannot apply basic skills",
+      "-Falls to develop professionally or",
+      " achieve timely qualification"
+    ],
 
-// 1. Standardized PromoRec
+    s3: [
+      "-Has thorough professional knowledge.",
+      "-Competently performs both routine and",
+      " new tasks",
+      "-Steadily improves skills, achieves timely",
+      " qualifications"     
+      ],
+    s5: [
+      "-Recognized expert, sought after to solve",
+      " difficult problems",
+      "-Exceptionally skilled, develops and",
+      " executes innovative ideas",
+      "-Achieves early/highly advanced",
+      " qualifications"
+    ]
+  },
+  cmeo: {
+    s1: [
+      "-Actions counter to Navy's retention goals.",
+      "-Uninvolved with mentoring or professional",
+      " development of subordinates",
+      "-Demonstrates behavior that stifles",
+      " command or work center success.",
+      "-Actions counter to good order and",
+      " discipline and negatively affect command/",
+      " organizational climate"
+    ],
+    s3: [
+      "-Positive leadership supports Navy's increased",
+      " retention goals. Active in decreasing attrition.",
+      "-Actions adequately encourage/support",
+      " subordinates' personal/professional growth.",
+      "-Fosters and atmosphere conducive to personal",
+      " and team success.",
+      "-Appreciates contributions of Navt personnel.",
+      "-Positive influence on Command climate.",
+      " Actions contribute to good order and discipline",
+      " and positively improves command/",
+      " organizational climate."
+    ],
+    s5: [
+      "-Measurably contributes to Navy's increased",
+      " retention and reduced attrition objectives.",
+      "-Proactive leader/exemplary mentor. Involved",
+      " in subordinates' personal development, leading",
+      " to professional growth/sustained commitment.",
+      "-Initiates support programs for military,",
+      " civilian, and families to achieve exceptional",
+      " command and organizational climate."
+    ]
+  },
+  bearing: {
+    s1:[ 
+      "-Consistent unsatisfactory appearance",
+      "-Unsatisfactory demeanor, or conduct",
+      "-Unable to meet one of more physical",
+      " readiness standards",
+      "-Fails to live up to one or more Navy",
+      "  Core Values: HONOR, COURAGE,",
+      " COMMITMENT."
+    ],
+    s3: [
+      "-Excellent personal appearance.",
+      "-Excellent demeanor or conduct.",
+      "-Compiles with physical readiness",
+      " program.",
+      "-Always loves up to Navy Core Values:",
+      " HONOR, COURAGE, COMMITMENT."
+    ],
+    s5:[
+      "-Exemplary personal appearance.",
+      "-Exemplary representative of Navy.",
+      "-A leader in physical readiness.",
+      "-Exemplifies Navy Core Values:",
+      " HONOR, COURAGE, COMMITMENT."
+    ]
+  },
+  teamwork: {
+    s1:[
+      "-Creates conflict, unwilling to work",
+      " with others, puts self above team.",
+      "-Fails to understand team goals or",
+      " teamwork techniques",
+      "-Does not take direction well."
+    ],
+    s3: [
+      "-Reinforces others' efforts, meets personal",
+      " commitments to team.",
+      "-Understands team goals, employs good",
+      " teamwork techniques.",
+      "-Accepts and offers team direction."
+    ],
+    s5:[
+      "-Team builder, inspires cooperation and",
+      " progress",
+      "-Talented mentor, focuses goals and",
+      " techniques for team.",
+      "-The best at accepting and offering team direction"
+    ]
+  },
+  missAccomp: {
+    s1:[
+      "-Lacks initiative.",
+      "-Unable to plan or prioritize.",
+      "-Does not maintain readiness.",
+      "-Fails to get the job done."
+    ],
+    s3: [
+      "-Takes initiative to meet goals.",
+      "-Plans/prioritizes effectively.",
+      "-Maintains high state of readiness.",
+      "-Always gets the job done."
+    ],
+    s5:[
+      "-Develops innovative ways to accomplish",
+      " mission.",
+      "-Plans/prioritizes with exceptional skill",
+      " and foresignt.",
+      "-Maintains superior readiness even with",
+      " limited resources.",
+      "-Gets job done earlier and far better than",
+      " expected"
+    ]
+  },
+  leadership: {
+    s1:[
+      "-Neglects growth/development or welfare",
+      " of subordinates.",
+      "-Fails to organize, creates problems",
+      " for subordinates.",
+      "-Does not set or achieve goals relevant",
+      " to command mission and vision",
+      "-Lacks ability to cope with or tolerate",
+      " stress.",
+      "-Inadequate communicator.",
+      "-Tolerates hazards or unsafe practices."
+    ],
+    s3: [
+      "-Effectively stimulates growth/development in",
+      " subordinates.",
+      "-Organizes successfully, implementing process",
+      " improvements and efficiences.",
+      "-Sets/achieves useful realistic goals that",
+      " support command mission.",
+      "-Performs well in stressful situations.",
+      "-Clear, timely communicator.",
+      "-Ensures safety of personnel and",
+      " equipment"
+    ],
+    s5:[
+      "-Inspring motivator and trainer,",
+      " subordinates reach highest level of growth",
+      " and development.",
+      "-Superb organizer, great foresight,",
+      " develops process improvements and",
+      " efficiences.",
+      "-Leadership achievements dramatically",
+      " further command mission and vision",
+      "-Perseveres through the toughest",
+      " challenges and inspires others.",
+      "-Exceptional communicator.",
+      "-Makes subordinates safety-conscious,",
+      " maintains top safety record.",
+      "-Constantly improves the personal",
+      " and professional lives of others."
+    ]
+  },
+  tactPerform:{
+    s1:[
+      "-Has difficulty attaining qualification",
+      " expected for the rank and experience.",
+      " Has difficulty in ship(s), aircraft",
+      " or weapons systems employment.",
+      " Belows others in knowledge and",
+      " employment.",
+      "-Warfare skills in specialty are",
+      " below standards compared to",
+      " others of same rank and",
+      " experience."
+    ],
+    s3: [
+      "-Attains qualifications as required",
+      " and expected.",
+      "-Capably employs ship(s), aircraft, or",
+      " weapons systems. Equal to others in",
+      " warfare knowledge and employment.",
+      "-Warfare skills in specialty equal to",
+      " others of same rank and experience."
+    ],
+    s5:[
+      "-Fully qualified at appropriate level",
+      " for rank and experience.",
+      "-Innovatively employs ship(s)",
+      " aircraft, or weapon systems. Well",
+      " above others in warfare knowledge",
+      " and employment.",
+      "-Warfare skills in specialty exceed",
+      " others of same rank and",
+      " experience."
+    ]
+  },
+};
+
+
+// Standardized PromoRec
 const PromoRec = ({ label, subLabel, name, value, setter }) => (
   <div className="navfit-row" style={{ display: 'flex', borderBottom: '1px solid black' }}>
     <div className="navfit-cell" style={{ flex: 0.2, padding: '4px' }}>
@@ -263,10 +479,12 @@ export default function App() {
   const [milestoneOne, setMilestoneOne] = useState('');
   const [milestoneTwo, setMilestoneTwo] = useState('');
   const [comments, setComments] = useState('');
+  const [commentFontSize, setCommentFontSize] = useState('14px');
   const [promotion, setPromotion] = useState('');
   const [sumPromo, setSumPromo] = useState('');
   const [seniorAddress, setSeniorAddress] = useState('');
   const [message, setMessage] = useState('');
+  const [statement, setStatement] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState({ title: '', text: '', isError: false });
   const [selectedReport, setSelectedReport] = useState(null);
@@ -278,29 +496,32 @@ export default function App() {
     setMessage("Ready for input...");
   }, []);
 
-// const handleSaveFitrep = () => {
-//   /* TEAM MEMBER: PLACE DATABASE SAVE LOGIC HERE */
-//   console.log("Saving data:", { name, ssn, cmdEmployAch });
-//   setMessage("Simulated Save: Data logged to console.");
-// };
+const handlePDFExport = async () => {
+  setMessage("Opening Save Dialog...");
+  try {
+      const result = await window.api.exportPDF();
+      if (result.success) {
+          triggerNotification("Success", `PDF saved to: ${result.path}`, false);
+      }
+  } catch (error) {
+      triggerNotification("Error", "PDF Export failed", true);
+  }
+};
 
-  const handlePDFExport = () => {
-    /* TATE: PLACE PDF CONVERSION/EXPORT LOGIC HERE */
-    setMessage("Simulated PDF: Export triggered.");
-  };
+const handleSQLite = async () => {
+  setMessage("Opening Export Dialog...");
+  try {
+      const result = await window.api.exportDatabase();
+      if (result.success) {
+          triggerNotification("Success", "Database exported!", false);
+      }
+  } catch (error) {
+      triggerNotification("Error", "Database export failed", true);
+  }
+};
 
   const handleExportDatabase = () => {
     /* TUCKER: PLACE DATABASE EXPORT LOGIC HERE */
-    setMessage("Simulated SQLite & ACCDB Export: SQLite & ACCDB files generated.");
-  };
-
-  const handleSQLite = () => {
-    /* TATE: PLACE SQLITE EXPORT LOGIC HERE */
-    setMessage("Simulated SQLite & ACCDB Export: SQLite & ACCDB files generated.");
-  };
-
-  const handleACCDB = () => {
-    /* TATE: PLACE ACCDB EXPORT LOGIC HERE */
     setMessage("Simulated SQLite & ACCDB Export: SQLite & ACCDB files generated.");
   };
 
@@ -308,6 +529,31 @@ export default function App() {
     /* THOMAS: FILE UPLOAD */
     setMessage("Simulated File Upload.");
   }
+  // calculate trait average
+  const calculateTraitAverage = () => {
+  // Use the state variables directly
+    const scores = [
+      parseFloat(proExpert),
+      parseFloat(cmeo),
+      parseFloat(bearing),
+      parseFloat(teamwork),
+      parseFloat(missAccomp),
+      parseFloat(leadership)
+    ];
+
+    // Check the tactPerform state directly
+    if (tactPerform !== "NOB" && tactPerform !== undefined) {
+      scores.push(parseFloat(tactPerform));
+    }
+
+    // Filter out any blanks or NOB values that turned into NaN
+    const validScores = scores.filter(num => !isNaN(num) && num !== 0);
+
+    if (validScores.length === 0) return "0.00";
+    
+    const sum = validScores.reduce((a, b) => a + b, 0);
+    return (sum / validScores.length).toFixed(2);
+  };
 
   const handleSaveFitrep = async () => {
     if (!uic) return triggerNotification("Missing Information", "Block 6: UIC is required", true);
@@ -377,7 +623,7 @@ export default function App() {
       cmeo,
       bearing,
       teamwork,
-      missAcomp,
+      missAccomp,
       leadership,
       tactPerform,
       milestoneOne,
@@ -386,6 +632,7 @@ export default function App() {
       promotion,
       sumPromo,
       seniorAddress,
+      statement,
       date: new Date().toLocaleDateString(),
     };
 
@@ -422,7 +669,7 @@ export default function App() {
       setCmeo('');
       setBearing('');
       setTeamwork('');
-      setMissAcomp('');
+      setMissAccomp('');
       setLeadership('');
       setTactPerform('');
       setMilestoneOne('');
@@ -431,6 +678,7 @@ export default function App() {
       setPromotion('');
       setSumPromo('');
       setSeniorAddress('');
+      setStatement('');
       await fetchReports(); 
     } catch (error) {
       triggerNotification("Database Error", "Could not save to SQLite file.", true);
@@ -858,7 +1106,6 @@ export default function App() {
           outline: 'none',
           resize: 'none',
           backgroundColor: cmdEmployAch.length > FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH ? '#fff0f0' : 'transparent',
-          fontFamily: '"Courier New", Courier, monospace',
           fontSize: '14px',
           lineHeight: '1.2'
         }}
@@ -910,7 +1157,6 @@ export default function App() {
             border: 'none', 
             textAlign: 'center', 
             fontSize: '12px', 
-            fontFamily: '"Courier New", monospace',
             outline: 'none',
             textTransform: 'uppercase'
           }}
@@ -927,7 +1173,6 @@ export default function App() {
             outline: 'none',
             resize: 'none',
             backgroundColor: duties.length > FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH ? '#fff0f0' : 'transparent',
-            fontFamily: 'Courier New", Courier, monospace',
             fontSize: '14px',
             lineHeight: '1.2',
           }}
@@ -991,7 +1236,7 @@ export default function App() {
         </div>
       </div>
 
-     {/* PERFORMANCE SECTION HEADER (TITLE) */}
+    {/* PERFORMANCE SECTION HEADER (TITLE) */}
     <div className="navfit-cell">
       <label style={{ fontSize: '9px', display: 'block' }}>
         PERFORMANCE TRAITS: 1.0 - Below standards progressing or UNSAT in any one standard; 2.0 - Does not yet meet all 3.0 standards; 3.0 - Meets all 3.0 standards; 4.0 - Exceeds most 3.0 standards; 5.0 - Meets overall criteria and most of the specific standards for 5.0. Standards are not all inclusive.
@@ -1039,37 +1284,37 @@ export default function App() {
       <PerformanceRow 
         label="33. PROFESSIONAL EXPERTISE:" 
         subLabel="Professional knowledge, proficiency, and qualifications."
-        name="proExpert" value={proExpert} setter={setProExpert} 
+        name="proExpert" value={proExpert} setter={setProExpert} standards={TRAIT_STANDARDS.proExpert}
       />
       <PerformanceRow 
         label="34. COMMAND OR ORGANIZATIONAL CLIMATE / EQUAL OPPORTUNITY:" 
         subLabel="Contributing to growth and development, human worth, community."
-        name="cmeo" value={cmeo} setter={setCmeo} 
+        name="cmeo" value={cmeo} setter={setCmeo} standards={TRAIT_STANDARDS.cmeo}
       />
       <PerformanceRow 
         label="35. MILITARY BEARING/CHARACTER:" 
         subLabel="Appearance, conduct, physical fitness, adherance to Navy Core Values."
-        name="bearing" value={bearing} setter={setBearing} 
+        name="bearing" value={bearing} setter={setBearing} standards={TRAIT_STANDARDS.bearing}
       />
       <PerformanceRow 
         label="36. TEAMWORK:" 
         subLabel="Contributions toward team building and team results."
-        name="teamwork" value={teamwork} setter={setTeamwork} 
+        name="teamwork" value={teamwork} setter={setTeamwork} standards={TRAIT_STANDARDS.teamwork}
       />
       <PerformanceRow 
         label="37. MISSION ACCOMPLISHMENT AND INITIATIVE:" 
         subLabel="Taking initiative, planning/prioritizing, achieving mission."
-        name="missAccomp" value={missAccomp} setter={setMissAccomp} 
+        name="missAccomp" value={missAccomp} setter={setMissAccomp} standards={TRAIT_STANDARDS.missAccomp}
       />
       <PerformanceRow 
         label="38. LEADERSHIP:" 
         subLabel="Organizing, motivating and developing others to accomplish goals."
-        name="leadership" value={leadership} setter={setLeadership} 
+        name="leadership" value={leadership} setter={setLeadership} standards={TRAIT_STANDARDS.leadership}
       />
       <PerformanceRow 
         label="39. TACTICAL PERFORMANCE:" 
         subLabel="(Warfare qualified officers only) Basic and tactical employment of weapons systems."
-        name="tactPerform" value={tactPerform} setter={setTactPerform} 
+        name="tactPerform" value={tactPerform} setter={setTactPerform} standards={TRAIT_STANDARDS.tactPerform}
       />
 
     {/* BLOCK 40: CAREER MILESTONES */}
@@ -1107,23 +1352,31 @@ export default function App() {
       width: '100%', 
       borderTop: '2px solid black', 
       padding: '5px'
-      }}>
-        {/* Applied font-family and smaller font-size to match NAVFIT headers */}
-        <label style={{ 
-          fontWeight: 'bold', 
-          fontSize: '8px', 
-          fontFamily: 'sans-serif', 
-          textTransform: 'uppercase' 
-        }}>
-          41. COMMENTS ON PERFORMANCE: * All 1.0 marks, three 2.0 marks, and 2.0 marks in Block 34 must be specifically substantiated in comments.
-        </label>
-        <label style={{ 
-          fontSize: '7px', 
-          fontFamily: 'sans-serif', 
-          marginBottom: '5px' 
-        }}>
-          Font must be 10 or 12 Pitch (10 or 12 Point) only. Use upper and lower case.
-        </label>
+    }}>
+      {/* HEADER WRAPPER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label style={{ fontWeight: 'bold', fontSize: '8px', textTransform: 'uppercase' }}>
+            41. COMMENTS ON PERFORMANCE: * All 1.0 marks, three 2.0 marks, and 2.0 marks in Block 34 must be specifically substantiated in comments.
+          </label>
+          <label style={{ fontSize: '7px', marginBottom: '5px' }}>
+            Font must be 10 or 12 Pitch (10 or 12 Point) only. Use upper and lower case.
+          </label>
+        </div>
+
+        {/* FONT SIZE DROPDOWN */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <label style={{ fontSize: '7px', fontWeight: 'bold' }}>FONT SIZE:</label>
+          <select 
+            value={commentFontSize} 
+            onChange={(e) => setCommentFontSize(e.target.value)}
+            style={{ fontSize: '9px', padding: '1px', cursor: 'pointer' }}
+          >
+            <option value="13.3px">10 pt</option>
+            <option value="16px">12 pt</option>
+          </select>
+        </div>
+      </div>
 
       <textarea 
         value={comments} 
@@ -1135,10 +1388,9 @@ export default function App() {
           outline: 'none',
           resize: 'none',
           backgroundColor: 'transparent',
-          /* Using a fallback for the typewriter font */
           fontFamily: '"Courier New", Courier, monospace',
-          /* 12pt is roughly 16px, but 14px usually looks better on screen */
-          fontSize: '14px', 
+          /* DYNAMIC FONT SIZE APPLIED HERE */
+          fontSize: commentFontSize, 
           lineHeight: '1.2'
         }}
         rows="10" 
@@ -1223,29 +1475,86 @@ export default function App() {
       </div>
     </div>
 
-    {/* BLOCKS 45-46, TRAIT AVERAGE & GROUP AVERAGE */}
-{/* SIGNATURE SECTION (Blocks 45, 46, 47) */}
+{/* BLOCKS 45-46 & AVERAGES */}
 <div className="navfit-row" style={{ display: 'flex', width: '100%', borderTop: '1px solid black' }}>
   
-  {/* BLOCK 45: SIGNATURE OF RATED MEMBER */}
-  <div className="navfit-cell" style={{ flex: 1, height: '60px' }}>
-    <label>45. SIGNATURE OF MEMBER RATED</label>
-    <div style={{ flex: 1 }}></div> {/* Spacer for the signature area */}
-    <span className="date-label">Date:</span>
+  {/* LEFT SIDE: BLOCK 45 AND AVERAGES */}
+  {/* Flex 1.0 matches the first 5 columns of the promo grid (ends at Promotable) */}
+  <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', borderRight: '1px solid black' }}>
+    
+    {/* BLOCK 45 */}
+    <div className="navfit-cell" style={{ height: '60px', borderRight: 'none' }}>
+      <label>45. SIGNATURE OF MEMBER RATED</label>
+      <div style={{ flex: 1.2 }}></div>
+      <span className="date-label">Date:</span>
+    </div>
+
+    {/* TRAIT & GROUP AVERAGE ROW */}
+    <div style={{ display: 'flex', borderTop: '1px solid black', borderBottom: '1px solid black', height: '40px' }}>
+      {/* These split Block 45 exactly in half */}
+      <div className="navfit-cell" style={{ flex: .6, borderRight: '1px solid black', borderBottom: 'none'}}>
+        <label>Member Trait Average: </label>
+        <div style={{ fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }}>
+          {calculateTraitAverage()}
+        </div>
+      </div>
+      <div className="navfit-cell" style={{ flex: .6, borderRight: 'none', borderBottom: 'none'}}>
+        <label>Summary Group Average: </label>
+        <div style={{ fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }}>
+          {/* Logic to be added here */}
+          CALCULATE
+        </div>
+      </div>
+    </div>
   </div>
 
-  {/* BLOCK 46: SIGNATURE OF REPORTING SENIOR */}
-  <div className="navfit-cell" style={{ flex: 1, borderLeft: '1px solid black' }}>
-    <label>46. SIGNATURE OF REPORTING SENIOR</label>
+  {/* RIGHT SIDE: BLOCK 46 */}
+  <div className="navfit-cell" style={{ flex: 1.15, display: 'flex', flexDirection: 'column', borderRight: 'none' }}>
+    <label>46. Signature of Individual evaluated. "I have seen this report, been apprised of my</label>
+    <label>performance, and understand my right to submit a system."</label>
+    
+    <div className="radio-group" style={{ 
+      display: 'flex', 
+      flexDirection: 'row', // Align items horizontally
+      justifyContent: 'flex-start', 
+      gap: '20px', // More space between the two options
+      marginTop: '8px' 
+    }}>
+
+    <label className="radio-label-right" style={{ fontSize: '9px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+      <span>I intend to submit a statement</span>
+      <input 
+        type="radio" 
+        className="square-radio"
+        value="statement" 
+        checked={statement === 'statement'} 
+        onChange={(e) => setStatement(e.target.value)} 
+      />
+    </label>
+
+    <label className="radio-label-right" style={{ fontSize: '9px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+      <span>I do not intend to submit a statement</span>
+      <input 
+        type="radio" 
+        className="square-radio"
+        value="no statement" 
+        checked={statement === 'no statement'} 
+        onChange={(e) => setStatement(e.target.value)} 
+      />
+    </label>
+    
+  </div>
     <div style={{ flex: 1 }}></div>
-    <span className="date-label">Date:</span>
+      <span className="date-label">Date:</span>
+    </div>
   </div>
 
-  {/* BLOCK 47: SIGNATURE OF REVIEWER (Optional) */}
-  <div className="navfit-cell" style={{ flex: 1, borderLeft: '1px solid black' }}>
-    <label>47. SIGNATURE OF REVIEWER</label>
-    <div style={{ flex: 1 }}></div>
-    <span className="date-label">Date:</span>
+{/* BLOCK 47: SIGNATURE OF REVIEWER */}
+<div className="navfit-row" style={{ display: 'flex', width: '100%', borderTop: '1px solid black', borderBottom: '1px solid black' }}>
+  <div className="navfit-cell" style={{ flex: 1 }}>
+      <label>47. Typed name, grade, command, UIC, and signature of Regular Reporting Senior on Concurrent Report</label>
+      <div style={{ flex: 1 }}></div>
+      <span className="date-label">Date:</span>
   </div>
 </div>
 
@@ -1259,10 +1568,17 @@ export default function App() {
       </div>
 
       {/* MODAL OVERLAY */}
+      {/* MODAL OVERLAY */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3 style={{ color: modalContent.isError ? '#bf616a' : '#a3be8c' }}>{modalContent.title}</h3>
+        <div className="modal-overlay" style={{
+            position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', 
+            justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }}>
+          <div className="modal-content" style={{
+              background: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center'
+          }}>
+            <h3 style={{ color: modalContent.isError ? 'red' : 'green' }}>{modalContent.title}</h3>
             <p>{modalContent.text}</p>
             <button onClick={() => setShowModal(false)}>Close</button>
           </div>
