@@ -28,7 +28,7 @@
       "package.json"
     ],
     "linux": {
-      "target": ["deb"],
+      "target": ["AppImage"],
       "maintainer": "Tucker Smith <tucker.smith@example.com>",
       "category": "Office"
     }

@@ -25,19 +25,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential python3 libsqlite3-dev
 
-      - name: Install All Dependencies
-        run: npm run install-all
-
-      - name: Build UI and Package .deb
+      - name: Build UI and Package Linux Assets
         run: |
           npm run build-ui
-          npx electron-builder --linux deb
+          # Build both deb and AppImage at the same time
+          npx electron-builder --linux deb AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/*.deb
+          # This pattern will now catch both .deb and .AppImage
+          files: |
+            dist/*.deb
+            dist/*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
