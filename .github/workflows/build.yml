@@ -47,8 +47,8 @@ jobs:
           chmod +x electron2.1/bin/jre/bin/java || true
           chmod +x electron2.1/bin/app.jar || true
 
-      #- name: Run Java Diagnostic
-      #  run: node test-java.js
+      - name: Run Java Diagnostic
+        run: node test-java.js
 
       - name: Build UI and Package Linux Assets
         run: |
