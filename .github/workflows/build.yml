@@ -2,13 +2,13 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*' # Triggers when you push a tag (e.g., git tag v1.0.0)
+      - 'v*' # Triggers when you push a tag (e.g., git tag v1.0.0.6)
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # REQUIRED to upload the .deb to Releases
+      contents: write # Essential for creating the GitHub Release and uploading files
     
     steps:
       - name: Checkout Code
@@ -19,24 +19,40 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          # This tells GitHub where to look for lockfiles to speed up future builds
+          cache-dependency-path: |
+            package-lock.json
+            frontend2.1/package-lock.json
+            electron2.1/package-lock.json
 
       - name: Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential python3 libsqlite3-dev
 
+      - name: Install All Nested Dependencies
+        run: |
+          # 1. Install root dependencies (Master Launcher)
+          npm install
+          # 2. Install Frontend dependencies (This provides 'vite')
+          cd frontend2.1 && npm install
+          # 3. Install Electron/Backend dependencies
+          cd ../electron2.1 && npm install
+
       - name: Build UI and Package Linux Assets
         run: |
+          # This triggers your root script: "cd frontend2.1 && npm run build"
           npm run build-ui
-          # Build both deb and AppImage at the same time
+          # Package both formats. electron-builder handles the better-sqlite3 rebuild.
           npx electron-builder --linux deb AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          # This pattern will now catch both .deb and .AppImage
+          # Delimited list tells the action to pick up both extensions
           files: |
             dist/*.deb
             dist/*.AppImage
