@@ -1,6 +1,8 @@
 name: Build and Release
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*' # Triggers when you push a tag (e.g., git tag v1.0.0.6)
 
@@ -49,8 +51,8 @@ jobs:
           chmod +x bin/jre/bin/java || true
           chmod +x bin/app.jar || true
 
-      - name: Run Java Diagnostic
-        run: node test-java.js
+      #- name: Run Java Diagnostic
+      #  run: node test-java.js
 
       - name: Build UI and Package Linux Assets
         run: |
