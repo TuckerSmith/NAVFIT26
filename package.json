@@ -30,9 +30,11 @@
       "output": "dist"
     },
     "extraResources": [
-      { "from": "bin", "to": "bin", "filter": ["**/*"] },
-      { "from": "templates", "to": "templates", "filter": ["**/*"] },
-      { "from": "db_files", "to": "db_files", "filter": ["**/*"] }
+      {
+        "from": "electron2.1/bin",
+        "to": "bin",
+        "filter": ["**/*"]
+      }
     ],
     "files": [
       "package.json",

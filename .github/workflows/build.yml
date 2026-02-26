@@ -43,8 +43,9 @@ jobs:
 
       - name: Fix Binary Permissions
         run: |
-          chmod +x bin/jre/bin/java || true
-          chmod +x bin/app.jar || true
+          # Pointing to the actual location inside the electron2.1 folder
+          chmod +x electron2.1/bin/jre/bin/java || true
+          chmod +x electron2.1/bin/app.jar || true
 
       - name: Fix Binary Permissions
         run: |

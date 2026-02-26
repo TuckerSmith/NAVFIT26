@@ -3,8 +3,8 @@ const path = require('path');
 const fs = require('fs');
 
 // These paths mimic your main.js logic
-const JAVA_BIN = path.join(__dirname, 'bin', 'jre', 'bin', 'java');
-const JAR_PATH = path.join(__dirname, 'bin', 'app.jar');
+const JAVA_BIN = path.join(__dirname, 'electron2.1', 'bin', 'jre', 'bin', 'java');
+const JAR_PATH = path.join(__dirname, 'electron2.1', 'bin', 'app.jar');
 
 console.log("--- NAVFIT26 Java Diagnostic ---");
 console.log(`Checking Java Bin: ${JAVA_BIN}`);
