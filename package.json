@@ -18,31 +18,37 @@
   "dependencies": {
     "pdf-lib": "^1.17.1"
   },
-  "build": {
-    "appId": "com.navfit26.master",
-    "productName": "NAVFIT26",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "electron2.1/**/*",
-      "frontend2.1/dist/**/*",
-      "backend2.1/**/*",
-      "node_modules/**/*",
-      "package.json",
-      "!**/node_modules/*/{CHANGELOG.md,README.md,test,obj,bin,SRC}"
-    ],
-    "asar": true,
-    "linux": {
-      "target": [
-        "AppImage"
-      ],
-      "maintainer": "Tucker Smith <tucker.smith@example.com>",
-      "category": "Office"
-    }
-  },
   "devDependencies": {
     "electron": "^25.0.0",
     "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.navfit26.master",
+    "productName": "NAVFIT26",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "extraResources": [
+      { "from": "bin", "to": "bin", "filter": ["**/*"] },
+      { "from": "templates", "to": "templates", "filter": ["**/*"] },
+      { "from": "db_files", "to": "db_files", "filter": ["**/*"] }
+    ],
+    "files": [
+      "package.json",
+      "electron2.1/**/*",
+      "backend2.1/**/*",
+      "node_modules/**/*",
+      {
+        "from": "frontend2.1/dist",
+        "to": "frontend_build",
+        "filter": ["**/*"]
+      }
+    ],
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "maintainer": "Tucker Smith <tucker.smith@example.com>",
+      "category": "Office"
+    }
   }
 }
