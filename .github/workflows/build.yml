@@ -34,12 +34,12 @@ jobs:
 
       - name: Install All Nested Dependencies
         run: |
-          # 1. Install root dependencies (Master Launcher)
           npm install
-          # 2. Install Frontend dependencies (This provides 'vite')
-          cd frontend2.1 && npm install
-          # 3. Install Electron/Backend dependencies
-          cd ../electron2.1 && npm install
+          npm install --prefix frontend2.1
+          npm install --prefix backend2.1
+          npm install --prefix electron2.1
+          # Forces the native module to rebuild for the current OS
+          cd electron2.1 && npx electron-rebuild -f -w better-sqlite3
 
       - name: Fix Binary Permissions
         run: |

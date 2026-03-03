@@ -49,6 +49,7 @@
       "package.json",
       "electron2.1/**/*",
       "backend2.1/**/*",
+      "electron2.1/node_modules/**/*",
       "node_modules/**/*",
       {
         "from": "frontend2.1/dist",
