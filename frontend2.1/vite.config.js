@@ -8,7 +8,7 @@ export default defineConfig({
   // Electron-specific build settings
   base: './', 
   build: {
-    outDir: 'dist', 
+    outDir: '../electron2.1/frontend_build', 
     emptyOutDir: true,
   },
 

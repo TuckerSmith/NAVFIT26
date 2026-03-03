@@ -2,703 +2,45 @@
 import React, { useState, useEffect } from 'react';
 import './styles/App.css'; 
 import { describe, it, expect } from 'vitest';
+import validators from './utils/formatters';
+import PerformanceRow from './components/PerformanceRow';
+import SumPromo from './components/SumPromo';
+import PromoRec from './components/PromoRec';
+import { FITREP_CONFIG, TRAIT_STANDARDS } from './constants/fitrepConfig';
+import useFitrep from './hooks/useFitrep';
 
-export const FITREP_CONFIG = {
-  MAX_DESIG_LENGTH: 4,
-  MAX_UIC_LENGTH: 5,
-  MAX_TITLE_LENGTH: 14,
-  MAX_ACHIEVEMENT_LENGTH: 276,
-  MAX_SSN_DIGITS: 9
-};
+export default function App(){
 
-/** * SUB-COMPONENT: PerformanceRow
- * This replicates the boxed 33-39 rows from NAVFIT98
- */
-const PerformanceRow = ({ label, subLabel, name, value, setter, standards }) => (
-  <div className="navfit-row" style={{ display: 'flex', borderBottom: '1px solid black' }}>
-    
-    {/* LEFT COLUMN: TRAIT & NOB */}
-    <div className="navfit-cell" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '4px' }}>
-      <div style={{ fontWeight: 'bold', fontSize: '9px' }}>{label}</div>
-      <div style={{ fontSize: '7px', color: '#444', marginBottom: '4px' }}>{subLabel}</div>
-      
-      {/* NOB Button pushed to bottom-right of this cell */}
-      <div style={{ 
-        marginTop: 'auto', 
-        alignSelf: 'flex-end', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '3px' 
-      }}>
-        <label style={{ fontSize: '7px', fontWeight: 'bold' }}>NOB</label>
-        <input type="radio" name={name} value="NOB" checked={value === 'NOB'} onChange={(e) => setter(e.target.value)} />
-      </div>
-    </div>
+  //const [currentView, setCurrentView] = useState('editor'); 
+  //const [activeReport, setActiveReport] = useState(null);
+  const [activeSqliteDb, setActiveSqliteDb] = useState('migrated_reports.db');
+  const {
+    formData, 
+    handleChange, 
+    handleSaveFitrep, // Changed from handleSave to match your hook function name
+    handlePDFExport,
+    calculateTraitAverage,
+    showModal,
+    setShowModal,
+    modalContent,
+    isSaved,
+    hasUnsavedChanges, 
+    handleACCDBExport,
+    getError
+  } = useFitrep(activeSqliteDb);
 
-    {/* SCORE COLUMNS (1.0 - 5.0) */}
-    {[
-      { val: "1.0", flex: 1, text: standards?.s1 },
-      { val: "2.0", flex: 0.5, text: "" },
-      { val: "3.0", flex: 1, text: standards?.s3 },
-      { val: "4.0", flex: 0.5, text: "" },
-      { val: "5.0", flex: 1, text: standards?.s5 }
-    ].map((col, idx) => (
-      <div key={idx} className="navfit-cell" style={{ 
-        flex: col.flex, 
-        display: 'flex', 
-        flexDirection: 'column', 
-        padding: '2px',
-        backgroundColor: idx % 2 === 0 ? '#fff' : '#f9f9f9',
-        minHeight: '80px' // Ensures consistent height across the row
-      }}>
-        {/* Standard Text stays at the top */}
-        <div style={{ fontSize: '9px', lineHeight: '1.1', textAlign: 'left', width: '100%' }}>
-          {Array.isArray(col.text) 
-            ? col.text.map((line, i) => <div key={i}>{line}</div>) 
-            : col.text}
-        </div>
-        
-        {/* Radio Button pushed to bottom-right of this cell */}
-        <div style={{ marginTop: 'auto', alignSelf: 'flex-end' }}>
-          <input 
-            type="radio" 
-            name={name} 
-            value={col.val} 
-            checked={value === col.val} 
-            onChange={(e) => setter(e.target.value)} 
-          />
-        </div>
-      </div>
-    ))}
-  </div>
-);
-const TRAIT_STANDARDS = {
-  proExpert: {
-    s1: [
-      "-Lacks basic professional knowledge to",
-      " perform effectively",
-      "-Cannot apply basic skills",
-      "-Falls to develop professionally or",
-      " achieve timely qualification"
-    ],
-
-    s3: [
-      "-Has thorough professional knowledge.",
-      "-Competently performs both routine and",
-      " new tasks",
-      "-Steadily improves skills, achieves timely",
-      " qualifications"     
-      ],
-    s5: [
-      "-Recognized expert, sought after to solve",
-      " difficult problems",
-      "-Exceptionally skilled, develops and",
-      " executes innovative ideas",
-      "-Achieves early/highly advanced",
-      " qualifications"
-    ]
-  },
-  cmeo: {
-    s1: [
-      "-Actions counter to Navy's retention goals.",
-      "-Uninvolved with mentoring or professional",
-      " development of subordinates",
-      "-Demonstrates behavior that stifles",
-      " command or work center success.",
-      "-Actions counter to good order and",
-      " discipline and negatively affect command/",
-      " organizational climate"
-    ],
-    s3: [
-      "-Positive leadership supports Navy's increased",
-      " retention goals. Active in decreasing attrition.",
-      "-Actions adequately encourage/support",
-      " subordinates' personal/professional growth.",
-      "-Fosters and atmosphere conducive to personal",
-      " and team success.",
-      "-Appreciates contributions of Navt personnel.",
-      "-Positive influence on Command climate.",
-      " Actions contribute to good order and discipline",
-      " and positively improves command/",
-      " organizational climate."
-    ],
-    s5: [
-      "-Measurably contributes to Navy's increased",
-      " retention and reduced attrition objectives.",
-      "-Proactive leader/exemplary mentor. Involved",
-      " in subordinates' personal development, leading",
-      " to professional growth/sustained commitment.",
-      "-Initiates support programs for military,",
-      " civilian, and families to achieve exceptional",
-      " command and organizational climate."
-    ]
-  },
-  bearing: {
-    s1:[ 
-      "-Consistent unsatisfactory appearance",
-      "-Unsatisfactory demeanor, or conduct",
-      "-Unable to meet one of more physical",
-      " readiness standards",
-      "-Fails to live up to one or more Navy",
-      "  Core Values: HONOR, COURAGE,",
-      " COMMITMENT."
-    ],
-    s3: [
-      "-Excellent personal appearance.",
-      "-Excellent demeanor or conduct.",
-      "-Compiles with physical readiness",
-      " program.",
-      "-Always loves up to Navy Core Values:",
-      " HONOR, COURAGE, COMMITMENT."
-    ],
-    s5:[
-      "-Exemplary personal appearance.",
-      "-Exemplary representative of Navy.",
-      "-A leader in physical readiness.",
-      "-Exemplifies Navy Core Values:",
-      " HONOR, COURAGE, COMMITMENT."
-    ]
-  },
-  teamwork: {
-    s1:[
-      "-Creates conflict, unwilling to work",
-      " with others, puts self above team.",
-      "-Fails to understand team goals or",
-      " teamwork techniques",
-      "-Does not take direction well."
-    ],
-    s3: [
-      "-Reinforces others' efforts, meets personal",
-      " commitments to team.",
-      "-Understands team goals, employs good",
-      " teamwork techniques.",
-      "-Accepts and offers team direction."
-    ],
-    s5:[
-      "-Team builder, inspires cooperation and",
-      " progress",
-      "-Talented mentor, focuses goals and",
-      " techniques for team.",
-      "-The best at accepting and offering team direction"
-    ]
-  },
-  missAccomp: {
-    s1:[
-      "-Lacks initiative.",
-      "-Unable to plan or prioritize.",
-      "-Does not maintain readiness.",
-      "-Fails to get the job done."
-    ],
-    s3: [
-      "-Takes initiative to meet goals.",
-      "-Plans/prioritizes effectively.",
-      "-Maintains high state of readiness.",
-      "-Always gets the job done."
-    ],
-    s5:[
-      "-Develops innovative ways to accomplish",
-      " mission.",
-      "-Plans/prioritizes with exceptional skill",
-      " and foresignt.",
-      "-Maintains superior readiness even with",
-      " limited resources.",
-      "-Gets job done earlier and far better than",
-      " expected"
-    ]
-  },
-  leadership: {
-    s1:[
-      "-Neglects growth/development or welfare",
-      " of subordinates.",
-      "-Fails to organize, creates problems",
-      " for subordinates.",
-      "-Does not set or achieve goals relevant",
-      " to command mission and vision",
-      "-Lacks ability to cope with or tolerate",
-      " stress.",
-      "-Inadequate communicator.",
-      "-Tolerates hazards or unsafe practices."
-    ],
-    s3: [
-      "-Effectively stimulates growth/development in",
-      " subordinates.",
-      "-Organizes successfully, implementing process",
-      " improvements and efficiences.",
-      "-Sets/achieves useful realistic goals that",
-      " support command mission.",
-      "-Performs well in stressful situations.",
-      "-Clear, timely communicator.",
-      "-Ensures safety of personnel and",
-      " equipment"
-    ],
-    s5:[
-      "-Inspring motivator and trainer,",
-      " subordinates reach highest level of growth",
-      " and development.",
-      "-Superb organizer, great foresight,",
-      " develops process improvements and",
-      " efficiences.",
-      "-Leadership achievements dramatically",
-      " further command mission and vision",
-      "-Perseveres through the toughest",
-      " challenges and inspires others.",
-      "-Exceptional communicator.",
-      "-Makes subordinates safety-conscious,",
-      " maintains top safety record.",
-      "-Constantly improves the personal",
-      " and professional lives of others."
-    ]
-  },
-  tactPerform:{
-    s1:[
-      "-Has difficulty attaining qualification",
-      " expected for the rank and experience.",
-      " Has difficulty in ship(s), aircraft",
-      " or weapons systems employment.",
-      " Belows others in knowledge and",
-      " employment.",
-      "-Warfare skills in specialty are",
-      " below standards compared to",
-      " others of same rank and",
-      " experience."
-    ],
-    s3: [
-      "-Attains qualifications as required",
-      " and expected.",
-      "-Capably employs ship(s), aircraft, or",
-      " weapons systems. Equal to others in",
-      " warfare knowledge and employment.",
-      "-Warfare skills in specialty equal to",
-      " others of same rank and experience."
-    ],
-    s5:[
-      "-Fully qualified at appropriate level",
-      " for rank and experience.",
-      "-Innovatively employs ship(s)",
-      " aircraft, or weapon systems. Well",
-      " above others in warfare knowledge",
-      " and employment.",
-      "-Warfare skills in specialty exceed",
-      " others of same rank and",
-      " experience."
-    ]
-  },
-};
-
-
-// Standardized PromoRec
-const PromoRec = ({ label, subLabel, name, value, setter }) => (
-  <div className="navfit-row" style={{ display: 'flex', borderBottom: '1px solid black' }}>
-    <div className="navfit-cell" style={{ flex: 0.2, padding: '4px' }}>
-      <div style={{ fontWeight: 'bold', fontSize: '10px' }}>{label}</div>
-      <div style={{ fontSize: '8px', color: '#444' }}>{subLabel}</div>
-    </div>
-    
-    {/* All scores set to 0.2 to match header */}
-    {["NOB", "Significant Problems", "Progressing", "Promotable", "Must Promote", "Early Promote"].map((val) => (
-      <div key={val} className="navfit-cell" style={{ flex: 0.2, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <input type="radio" name={name} value={val} checked={value === val} onChange={(e) => setter(e.target.value)} />
-      </div>
-    ))}
-  </div>
-);
-
-
-const SumPromo = ({ label, subLabel, value, setter }) => {
-  const handleInputChange = (field, val) => {
-    const numericValue = val.replace(/[^0-9]/g, '');
-    setter({ ...value, [field]: numericValue });
+  // Helper to convert Browser Date (YYYY-MM-DD) to Navy Format (YYMMM DD)
+  const formatDateToNavy = (dateVal) => {
+    if (!dateVal) return "";
+    const date = new Date(dateVal);
+    if (isNaN(date.getTime())) return dateVal; 
+    const day = String(date.getDate()).padStart(2, '0');
+    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    const month = months[date.getMonth()];
+    const year = String(date.getFullYear()).slice(-2);
+    return `${year}${month} ${day}`;
   };
-
-  return (
-    <div className="navfit-row" style={{ display: 'flex', borderBottom: 'none' }}>
-      <div className="navfit-cell" style={{ flex: 0.2, padding: '4px' }}>
-        <div style={{ fontWeight: 'bold', fontSize: '10px' }}>{label}</div>
-        <div style={{ fontSize: '8px', color: '#444' }}>{subLabel}</div>
-      </div>
-
-      {['nob', 'sigProb', 'prog', 'promotable', 'mustPromote', 'earlyPromote'].map((field) => {
-        // Check if this is the NOB box
-        const isNob = field === 'nob';
-
-        return (
-          <div key={field} className="navfit-cell" style={{ 
-            flex: 0.2, 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            /* If it's NOB, make it black, otherwise white */
-            backgroundColor: isNob ? '#000' : '#fff' 
-          }}>
-            {!isNob && (
-              <input 
-                type="text" 
-                maxLength="3"
-                value={value[field] || ''} 
-                onChange={(e) => handleInputChange(field, e.target.value)} 
-                className="navfit-input"
-                style={{ textAlign: 'center', fontWeight: 'bold', width: '100%' }}
-                placeholder="0"
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-// Block 1
-export const formatName = (nameValue) => {
-  if (!nameValue) return false; // Don't show error if empty
-  const nameRegex = /^[A-Z-]+,\s[A-Z-]+(\s[A-Z])?$/;
-  return !nameRegex.test(nameValue.trim());
-};
-
-// Block 2
-export const formatGrade = (gradeValue) => {
-  if (!gradeValue) return false; // Don't show error if empty
-  const validGrades = ['ENS', 'LTJG', 'LT', 'LCDR', 'CDR', 'CAPT', 'RADML', 'RADM', 'VADM', 'ADM'];
-  return !validGrades.includes(gradeValue.trim().toUpperCase());
-};
-
-// Block 3
-// format designator
-export const formatDesig = (desigValue) => {
-  if (!desigValue) return false;
-  // remove all non-digit
-  return desigValue.replace(/\D/g, '');
-};
-
-
-// Block 4
-// force SSN to be 9 digits with in XXX-XX-XXXX format
-export const formatSSN = (ssnValue) => {
-
-  if (!ssnValue) return "";
-
-  // Remove all non-digit characters
-  const val = ssnValue.replace(/\D/g, '');
   
-  // Limit to 9 digits
-  const limited = val.substring(0, 9);
-  
-  // Inject dashes: XXX-XX-XXXX
-  if (limited.length > 5) {
-      return `${limited.substring(0, 3)}-${limited.substring(3, 5)}-${limited.substring(5, 9)}`;
-  } else if (limited.length > 3) {
-      return `${limited.substring(0, 3)}-${limited.substring(3, 5)}`;
-  }
-  return limited;
-};
-
-// format UIC
-export const formatUIC = (value) => {
-
-  // remove all non-digit
-  return value.replace(/\D/g, '');
-};
-
-// format dates
-export const formatDateToNavy = (dateString) => {
-  if (!dateString) return "";
-  
-  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-  const date = new Date(dateString);
-  
-  // Add a day because Date(dateString) can sometimes be off by one due to timezone
-  date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
-
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = months[date.getMonth()];
-  const year = String(date.getFullYear()).slice(-2); // Gets last two digits (e.g. 26)
-
-  return `${year}${month}${day}`;
-};
-
-// format senior officer title
-export const formatTitle = (value) => {
-
-  // only allow letters
-  return value.replace(/[^a-zA-z\s]/g, '');
-};
-
-// format achievements block
-export const formatAch = (value) => {
-
-  // limit to 276 digits
-  const limited = value.substring(0, 276);
-
-  return limited;
-
-};
-
-export default function App() {
-  const [reports, setReports] = useState([]);
-  const [name, setName] = useState('');
-  const [grade, setGrade] = useState('');
-  const [desig, setDesig] = useState('');
-  const [ssn, setSSN] = useState('');
-  const [dutyStatus, setDutyStatus] = useState('');
-  const [uic, setUIC] = useState('');
-  const [station, setStation] = useState('');
-  const [promo, setPromo] = useState('');
-  const [dateRep, setDateRep] = useState('');
-  const [occasion, setOccasion] = useState('');
-  const [fromPeriod, setFromPeriod] = useState('');
-  const [toPeriod, setToPeriod] = useState('');
-  const [notObserved, setNotObserved] = useState('');
-  const [reportType, setReportType] = useState('');
-  const [physicalRead, setPhysicalRead] = useState('');
-  const [billetSub, setBilletSub] = useState('');
-  const [reportSenior, setReportSenior] = useState('');
-  const [reportGrade, setReportGrade] = useState('');
-  const [reportDesig, setReportDesig] = useState('');
-  const [reportTitle, setReportTitle] = useState('');
-  const [reportUIC, setReportUIC] = useState('');
-  const [reportSSN, setReportSSN] = useState('');
-  const [cmdEmployAch, setCmdEmployAch] = useState('');
-  const [duties, setDuties] = useState('');
-  const [dateCounseled, setDateCounseled] = useState('');
-  const [counselor, setCounselor] = useState('');
-  const [proExpert, setProExpert] = useState('');
-  const [cmeo, setCmeo] = useState('');
-  const [bearing, setBearing] = useState('');
-  const [teamwork, setTeamwork] = useState('');
-  const [missAccomp, setMissAccomp] = useState('');
-  const [leadership, setLeadership] = useState('');
-  const [tactPerform, setTactPerform] = useState('');
-  const traitDescriptions = {
-    '1.0': 'Significant Problems',
-    '2.0': 'Progressing',
-    '3.0': 'Fully Meets Standards',
-    '4.0': 'Exceeds Standards',
-    '5.0': 'Greatly Exceeds Standards',
-    'NOB': 'Not Observed'
-  };
-  const [milestoneOne, setMilestoneOne] = useState('');
-  const [milestoneTwo, setMilestoneTwo] = useState('');
-  const [comments, setComments] = useState('');
-  const [commentFontSize, setCommentFontSize] = useState('14px');
-  const [promotion, setPromotion] = useState('');
-  const [sumPromo, setSumPromo] = useState('');
-  const [seniorAddress, setSeniorAddress] = useState('');
-  const [message, setMessage] = useState('');
-  const [statement, setStatement] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [modalContent, setModalContent] = useState({ title: '', text: '', isError: false });
-  const [selectedReport, setSelectedReport] = useState(null);
-
-  // --- PLACEHOLDERS FOR SAVING & EXPORTING LOGIC ---
-
-  useEffect(() => {
-    /* PLACE DATABASE FETCH LOGIC HERE (e.g., fetch reports from SQLite) */
-    setMessage("Ready for input...");
-  }, []);
-
-const handlePDFExport = async () => {
-  setMessage("Opening Save Dialog...");
-  try {
-      const result = await window.api.exportPDF();
-      if (result.success) {
-          triggerNotification("Success", `PDF saved to: ${result.path}`, false);
-      }
-  } catch (error) {
-      triggerNotification("Error", "PDF Export failed", true);
-  }
-};
-
-const handleSQLite = async () => {
-  setMessage("Opening Export Dialog...");
-  try {
-      const result = await window.api.exportDatabase();
-      if (result.success) {
-          triggerNotification("Success", "Database exported!", false);
-      }
-  } catch (error) {
-      triggerNotification("Error", "Database export failed", true);
-  }
-};
-
-  const handleExportDatabase = () => {
-    /* TUCKER: PLACE DATABASE EXPORT LOGIC HERE */
-    setMessage("Simulated SQLite & ACCDB Export: SQLite & ACCDB files generated.");
-  };
-
-  const fileUpload = () => {
-    /* THOMAS: FILE UPLOAD */
-    setMessage("Simulated File Upload.");
-  }
-  // calculate trait average
-  const calculateTraitAverage = () => {
-  // Use the state variables directly
-    const scores = [
-      parseFloat(proExpert),
-      parseFloat(cmeo),
-      parseFloat(bearing),
-      parseFloat(teamwork),
-      parseFloat(missAccomp),
-      parseFloat(leadership)
-    ];
-
-    // Check the tactPerform state directly
-    if (tactPerform !== "NOB" && tactPerform !== undefined) {
-      scores.push(parseFloat(tactPerform));
-    }
-
-    // Filter out any blanks or NOB values that turned into NaN
-    const validScores = scores.filter(num => !isNaN(num) && num !== 0);
-
-    if (validScores.length === 0) return "0.00";
-    
-    const sum = validScores.reduce((a, b) => a + b, 0);
-    return (sum / validScores.length).toFixed(2);
-  };
-
-  const handleSaveFitrep = async () => {
-    if (!uic) return triggerNotification("Missing Information", "Block 6: UIC is required", true);
-    
-    if (!station) return triggerNotification("Missing Information", "Block 7: Ship/Station is required", true);
-    
-    if (!promo) return triggerNotification("Missing Information", "Block 8: Promotion Status is required", true);
-    
-    if (!dateRep) return triggerNotification("Missing Information", "Block 9: Date Reported is required", true);
-
-    if (!occasion) return triggerNotification("Missing Information", "Blocks 10-13: Select an Occasion for Report", true);
-
-    if (!fromPeriod) return triggerNotification("Missing Information", "Block 14: Start of Period is required", true);
-
-    if (!toPeriod) return triggerNotification("Missing Information", "Block 15: End of Period is required", true);
-    
-    if (!reportType) return triggerNotification("Missing Information", "Blocks 17-19: Select a Type of Report", true);
-
-    const physicalReadRegex = /^[P|F|M|W|B|N]/
-    if (!physicalRead) return triggerNotification("Missing Information", "Block 20: Physical Readiness is required", true);
-    if (!physicalReadRegex.test(physicalRead.trim())) return triggerNotification("Block 20 Formatting Error", "Physical Readiness Code must be B, F, M, N, P, W", true);
-    if (physicalRead.equals("B")) return triggerNotification("Block 20 Warning", "B was selected. Explain in block 41", true);
-
-    if (!billetSub) return triggerNotification("Missing Information", "Block 21: Billet Subcategory is required", true);
-    
-    if (!reportSenior) return triggerNotification("Missing Information", "Block 22: Reporting Senior is required", true);
-    const seniorRegex = /^[A-Z-]+,\s[A-Z](\s[A-Z])?$/; 
-    if (!seniorRegex.test(reportSenior.trim())) return triggerNotification("Block 22 Formatting Error", "Reporting Senior name must be formatted as LAST, FI MI.", true);
-    
-    if (!reportGrade) return triggerNotification("Missing Information", "Block 23: Grade is required", true);
-    if (!grade_rate.includes(reportGrade.trim())) return triggerNotification("Block 23 Formatting Error", "Invalid Officer Rank", true);
-
-    if (!reportDesig) return triggerNotification("Missing Information", "Block 24: Desig is required", true);
-    if (!reportTitle) return triggerNotification("Missing Information", "Block 25: Title is required", true);
-    if (!reportUIC) return triggerNotification("Missing Information", "Block 26: UIC is required", true);
-    if (!reportSSN) return triggerNotification("Missing Information", "Block 27: SSN is required", true);
-    if (!cmdEmployAch) return triggerNotification("Missing Information", "Block 28: Command Employment and Command Achievements is required", true);
-  
-    const newFitrep = {
-      name, 
-      grade,
-      desig,
-      ssn,
-      dutyStatus,
-      uic,
-      station,
-      promo,
-      dateRep,
-      occasion,
-      fromPeriod,
-      toPeriod,
-      notObserved,
-      reportType,
-      physicalRead,
-      billetSub,
-      reportSenior,
-      reportGrade,
-      reportDesig,
-      reportTitle,
-      reportUIC,
-      reportSSN,
-      cmdEmployAch,
-      duties,
-      dateCounseled,
-      counselor,
-      proExpert,
-      cmeo,
-      bearing,
-      teamwork,
-      missAccomp,
-      leadership,
-      tactPerform,
-      milestoneOne,
-      milestoneTwo,
-      comments,
-      promotion,
-      sumPromo,
-      seniorAddress,
-      statement,
-      date: new Date().toLocaleDateString(),
-    };
-
-    try {
-      const result = await window.api.saveFitrep(newFitrep);
-      triggerNotification("Success", "Report saved to database successfully!", false);
-      setName('');
-      setGrade('');
-      setDesig('');
-      setSSN('');
-      setDutyStatus('');
-      setUIC('');
-      setStation('');
-      setPromo('');
-      setDateRep('');
-      setOccasion('');
-      setFromPeriod('');
-      setToPeriod('');
-      setNotObserved('');
-      setReportType('');
-      setPhysicalRead('');
-      setBilletSub('');
-      setReportSenior('');
-      setReportGrade('');
-      setReportDesig('');
-      setReportTitle('');
-      setReportUIC('');
-      setReportSSN('');
-      setCmdEmployAch('');
-      setDuties('');
-      setDateCounseled('');
-      setCounselor('');
-      setProExpert('');
-      setCmeo('');
-      setBearing('');
-      setTeamwork('');
-      setMissAccomp('');
-      setLeadership('');
-      setTactPerform('');
-      setMilestoneOne('');
-      setMilestoneTwo('');
-      setComments('');
-      setPromotion('');
-      setSumPromo('');
-      setSeniorAddress('');
-      setStatement('');
-      await fetchReports(); 
-    } catch (error) {
-      triggerNotification("Database Error", "Could not save to SQLite file.", true);
-    }
-  };
-
-  const handlePrintFromList = async (report) => {
-    setMessage(`Preparing PDF for ${report.name}...`);
-    
-    // 1. Tell the hidden template to use this report's data
-    setSelectedReport(report);
-    
-    // 2. Wait 100ms for the UI to update the hidden div, then trigger PDF
-    setTimeout(async () => {
-        await window.api.exportPDF();
-        setSelectedReport(null); // Reset back to "Editor Mode"
-        setMessage("PDF Generated.");
-    }, 100);
-  };
-
   return (
     <div className="navfit-paper">
       {/* HEADER SECTION */}
@@ -706,103 +48,129 @@ const handleSQLite = async () => {
         <h1>FITNESS REPORT & COUNSELING RECORD (W2-O6)</h1>
       </div>
 
-    <div className="navfit-row" style={{ borderTop: '2px solid black' }}>
+    <div className="navfit-row" style={{ borderTop: '1px solid black' }}>
       {/* BLOCKS 1-4: THE TOP ROW */}
       {/* BLOCK 1 */}
       <div className="navfit-row">
-        <div className="navfit-cell" style={{ flex: 3 }}>
+        <div 
+          className={`navfit-cell ${getError('name').isError ? "input-error" : ""}`} 
+          style={{ flex: 3 }}
+        >
           <label>1. Name (Last, First MI Suffix)</label>
           <input 
-            value={name} 
-            onChange={(e) => setName(e.target.value.toUpperCase())} 
+            className="navfit-input"
+            value={formData.name} 
+            onChange={(e) => {
+              // Keeps the auto-uppercase and regex blocking in the onChange
+              const cleanValue = e.target.value.toUpperCase().replace(/[^A-Z,\s-]/g, '');
+              handleChange('name', cleanValue);
+            }} 
           />
-            {formatName(name) && <div className="error-text">Format: LAST, FIRST MI</div>}
-        </div>
-
-      {/* BLOCK 2 */}
-        <div className="navfit-cell" style={{ flex: 1 }}>
-          <label>2. Grade/Rate</label>
-          <input 
-            value={grade} 
-            onChange={(e) => setGrade(e.target.value.toUpperCase())}
-          />
-          {formatGrade(grade) && (
-            <div className="error-text shake">
-              Invalid Officer Rank (Use: ENS, LT, CDR, etc.)
-            </div>
-          )}
-        </div>
-
-      {/* BLOCK 3 */}
-        <div className="navfit-cell" style={{ flex: 1 }}>
-          <label>3. Desig</label>
-          <input 
-            value={desig} 
-            maxLength="4" 
-            onChange={(e) => setDesig(e.target.value.replace(/\D/g, ''))} 
-          />
-          {desig.length > FITREP_CONFIG.MAX_DESIG_LENGTH && (
-          <div className="error-text">
-            Warning: Designator must be {FITREP_CONFIG.MAX_DESIG_LENGTH} digits.
-           </div>
-        )}
-        </div>
       
-      {/* BLOCK 4 */}
-        <div className="navfit-cell" style={{ flex: 1.5 }}>
-          <label>4. SSN</label>
-          <input 
-            value={ssn} 
-            onChange={(e) => setSSN(formatSSN(e.target.value))} 
-            placeholder="___-__-____" 
-          />
-          {ssn.length < 11 && ssn.length > 0 && (
-            <div className="error-text">
-              Warning: SSN must be 9 digits.
+          {getError('name').isError && (
+            <div style={{ color: 'red', fontSize: '10px', marginTop: '1px', fontWeight: 'bold' }}>
+              {getError('name').note}
             </div>
           )}
         </div>
+
+
+      {/* BLOCK 2: GRADE/RATE */}
+      <div 
+        className={`navfit-cell ${getError('grade').isError ? "input-error" : ""}`} 
+        style={{ flex: 1 }}
+      >
+        <label>2. Grade/Rate</label>
+        <input 
+          className="navfit-input"
+          value={formData.grade} 
+          // Auto-uppercase as they type for Navy standards
+          onChange={(e) => handleChange('grade', e.target.value.toUpperCase())}
+        />
+        
+        {/* Show the specific error message from your validators file */}
+        {getError('grade').isError && (
+          <div className="error-note">
+            {getError('grade').note}
+          </div>
+        )}
+      </div>
+
+      {/* BLOCK 3: DESIG */}
+      <div 
+        className={`navfit-cell ${getError('desig').isError ? "input-error" : ""}`} 
+        style={{ flex: 1 }}
+      >
+        <label>3. Desig</label>
+        <input 
+          className="navfit-input"
+          value={formData.desig} 
+          // This regex stays: it forces only numbers (digits) as they type
+          onChange={(e) => handleChange('desig', e.target.value.replace(/\D/g, ''))} 
+          maxLength={4} // Navy Designators are exactly 4 digits
+        />
+        
+        {/* If the validator finds an issue (like only 3 digits), show the note */}
+        {getError('desig').isError && (
+          <div className="error-note">
+            {getError('desig').note}
+          </div>
+        )}
+      </div>
+      
+      {/* BLOCK 4: SSN */}
+      <div 
+        className={`navfit-cell ${getError('ssn').isError ? "input-error" : ""}`} 
+        style={{ flex: 1.5 }}
+      >
+        <label>4. SSN</label>
+        <input 
+          className="navfit-input"
+          value={formData.ssn} 
+          placeholder="000-00-0000"
+          onChange={(e) => {
+            // 1. Strip all non-digits
+            let val = e.target.value.replace(/\D/g, '');
+            if (val.length > 9) val = val.slice(0, 9);
+            
+            // 2. Apply the Navy/Standard SSN mask (000-00-0000)
+            const masked = val
+              .replace(/^(\d{3})(\d)/, '$1-$2')
+              .replace(/^(\d{3})-(\d{2})(\d)/, '$1-$2-$3');
+            
+            // 3. Update the state
+            handleChange('ssn', masked);
+          }}
+        />
+        
+        {/* If the SSN is incomplete (less than 11 characters including dashes), show the note */}
+        {getError('ssn').isError && (
+          <div className="error-note">
+            {getError('ssn').note}
+          </div>
+        )}
+      </div>
       </div>
       </div>
       
       {/* BLOCKS 5-9: THE DUTY STATION ROW */}
       <div className="navfit-row">
-        {/*BLOCK 5*/}
+        {/* BLOCK 5: DUTY STATUS */}
         <div className="navfit-cell" style={{ flex: 2 }}>
           <label>5. Duty Status</label>
-          <div className="radio-group">
-            <label className="radio-label">
-              <input 
-                type="radio" 
-                value="ACT" 
-                checked={dutyStatus === 'ACT'} 
-                onChange={(e) => setDutyStatus(e.target.value)} 
-              /> ACT
-            </label>
-            <label className="radio-label">
-              <input 
-                type="radio" 
-                value="FTS" 
-                checked={dutyStatus === 'FTS'} 
-                onChange={(e) => setDutyStatus(e.target.value)} 
-              /> FTS
-            </label>
-            <label className="radio-label">
-              <input 
-                type="radio" 
-                value="INACT" 
-                checked={dutyStatus === 'INACT'} 
-                onChange={(e) => setDutyStatus(e.target.value)} 
-              /> INACT
-            </label>
-            <label className="radio-label">
-              <input 
-                type="radio" 
-                value="AT/ADSW/" 
-                checked={dutyStatus === 'AT/ADSW/'} 
-                onChange={(e) => setDutyStatus(e.target.value)} 
-              /> AT/ADSW/
-            </label>
+          <div className="radio-group" style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+            {['ACT', 'FTS', 'INACT', 'AT/ADSW/'].map((status) => (
+              <label key={status} className="radio-label" style={{ fontSize: '9px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <input 
+                  type="radio" 
+                  name="dutyStatus"
+                  value={status} 
+                  checked={formData.dutyStatus === status} 
+                  onChange={(e) => handleChange('dutyStatus', e.target.value)}
+                /> 
+                {status}
+              </label>
+            ))}
           </div>
         </div>
 
@@ -810,27 +178,45 @@ const handleSQLite = async () => {
         <div className="navfit-cell" style={{ flex: 1 }}>
           <label>6. UIC</label>
           <input 
-            value={uic} 
-            maxLength="5" 
-            onChange={(e) => setUIC(e.target.value.replace(/\D/g, ''))} 
+            value={formData.uic} 
+            onChange={(e) => handleChange('uic', e.target.value.replace(/\D/g, ''))} 
           />
+          {formData.uic.length > FITREP_CONFIG.MAX_UIC_LENGTH && (
+          <div className="error-text">
+            Warning: Designator must be {FITREP_CONFIG.MAX_UIC_LENGTH} digits.
+          </div>
+        )}
         </div>
 
-        {/*BLOCK 7*/}
-        <div className="navfit-cell" style={{ flex: 1.5 }}>
+  
+        {/* BLOCK 7: SHIP/STATION */}
+        <div 
+          className={`navfit-cell ${getError('station').isError ? "input-error" : ""}`} 
+          style={{ flex: 1.5 }}
+        >
           <label>7. Ship/Station</label>
           <input 
-            value={station} 
-            onChange={(e) => setStation(e.target.value.toUpperCase())} 
+            className="navfit-input"
+            value={formData.station} 
+            // Auto-uppercase to match Navy administrative standards
+            onChange={(e) => handleChange('station', e.target.value.toUpperCase())} 
+            placeholder="USS SHIPNAME / COMMAND"
           />
+          
+          {/* If required and empty, or if it exceeds character limits */}
+          {getError('station').isError && (
+            <div className="error-note">
+              {getError('station').note}
+            </div>
+          )}
         </div>
 
         {/*BLOCK 8*/}
         <div className="navfit-cell" style={{ flex: .5 }}>
           <label>8. Promotion Status</label>
           <select 
-            value={promo} 
-            onChange={(e) => setPromo(e.target.value)}
+            value={formData.promo} 
+            onChange={(e) => handleChange('promo', e.target.value)}
             className="dropdown-input"
           >
             <option value="">  </option>
@@ -840,73 +226,129 @@ const handleSQLite = async () => {
             <option value="SPOT">SPOT</option>
           </select>
         </div>
-
-        {/*BLOCK 9*/}
-        <div className="navfit-cell" style={{ flex: .5 }}>
+        
+        {/* BLOCK 9: DATE REPORTED */}
+        <div 
+          className={`navfit-cell ${getError('dateRep').isError ? "input-error" : ""}`} 
+          style={{ flex: 0.5 }}
+        >
           <label>9. Date Reported</label>
           <input 
-            type={dateRep ? "text" : "date"}
-            value ={dateRep}
-            onChange={(e) => setDateRep(formatDateToNavy(e.target.value))} 
+            // If we have a value, show it as text (formatted), otherwise show date picker
+            type={formData.dateRep ? "text" : "date"}
+            className="navfit-input calendar-input"
+            value={formData.dateRep}
+            placeholder="YYMMM DD"
+            
+            // When they pick a date, we format it to Navy style immediately
+            onChange={(e) => {
+              if (e.target.value) {
+                handleChange('dateRep', formatDateToNavy(e.target.value));
+              }
+            }} 
+            
+            // Switch back to date picker only if they click to edit
             onFocus={(e) => {
               e.target.type = "date";
-              setDateRep("");
             }}
-            placeholder="Select Date"
-            className="calendar-input"
+            
+            // Switch back to text when they click away
+            onBlur={(e) => {
+              if (formData.dateRep) e.target.type = "text";
+            }}
           />
+
+          {/* Validator for date logic (e.g., checking if the date is in the future) */}
+          {getError('dateRep').isError && (
+            <div className="error-note">
+              {getError('dateRep').note}
+            </div>
+          )}
         </div>
       </div>
 
       {/* BLOCKS 10-15 */}
       <div className="navfit-row">
         
-        {/* BLOCKS 10-13 */}
-        <div className="navfit-cell" style={{ flex: 3 }}>
-          <label>Occasion for Report</label>
-          <div className="radio-group" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
-            <label className="radio-label" style={{ fontSize: '9px' }}>
-              <input type="radio" value="Periodic" checked={occasion === 'Periodic'} onChange={(e) => setOccasion(e.target.value)} /> 10. Periodic
-            </label>
-            <label className="radio-label" style={{ fontSize: '9px' }}>
-              <input type="radio" value="Detachment of Individual" checked={occasion === 'Detachment of Individual'} onChange={(e) => setOccasion(e.target.value)} /> 11. Detachment of Individual
-            </label>
-            <label className="radio-label" style={{ fontSize: '9px' }}>
-              <input type="radio" value="Detachment of Reporting Senior" checked={occasion === 'Detachment of Reporting Senior'} onChange={(e) => setOccasion(e.target.value)} /> 12. Detachment of Reporting Senior
-            </label>
-            <label className="radio-label" style={{ fontSize: '9px' }}>
-              <input type="radio" value="Special" checked={occasion === 'Special'} onChange={(e) => setOccasion(e.target.value)} /> 13. Special
-            </label>
-          </div>
+      {/* BLOCKS 10-13: OCCASION FOR REPORT */}
+      <div className="navfit-cell" style={{ flex: 3 }}>
+        <label style={{ fontWeight: 'normal' }}>Occasion for Report</label>
+        <div className="radio-group" style={{ 
+          display: 'flex', 
+          flexDirection: 'row', 
+          flexWrap: 'nowrap', // Forces them to stay in one row
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          gap: '4px', 
+          marginTop: '4px' 
+        }}>
+          <label className="radio-label" style={{ fontSize: '8.5px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '1px' }}>
+            <input type="radio" value="Periodic" checked={formData.occasion === 'Periodic'} onChange={(e) => handleChange('occasion', e.target.value)} /> 10. Periodic
+          </label>
+          
+          <label className="radio-label" style={{ fontSize: '8.5px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '1px' }}>
+            <input type="radio" value="Detachment of Individual" checked={formData.occasion === 'Detachment of Individual'} onChange={(e) => handleChange('occasion', e.target.value)} /> 11. Detachment of Indiv.
+          </label>
+          
+          <label className="radio-label" style={{ fontSize: '8.5px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '1px' }}>
+            <input type="radio" value="Detachment of Reporting Senior" checked={formData.occasion === 'Detachment of Reporting Senior'} onChange={(e) => handleChange('occasion', e.target.value)} /> 12. Detachment of Senior
+          </label>
+          
+          <label className="radio-label" style={{ fontSize: '8.5px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '1px' }}>
+            <input type="radio" value="Special" checked={formData.occasion === 'Special'} onChange={(e) => handleChange('occasion', e.target.value)} /> 13. Special
+          </label>
         </div>
+      </div>
 
-        {/* BLOCKS 14 & 15 */}
-        <div className="navfit-cell" style={{ flex: 2, display: 'flex', flexDirection: 'column' }}>
-          <label>Period of Report</label>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '9px' }}>14. FROM:</label>
-              <input 
-                type={toPeriod ? "text" : "date"}
-                value={toPeriod}
-                onChange={(e) => setToPeriod(formatDateToNavy(e.target.value))} 
-                onFocus={(e) => { e.target.type = "date"; setToPeriod(""); }}
-                className="navfit-input"
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '9px' }}>15. TO:</label>
-              <input 
-                type={fromPeriod ? "text" : "date"}
-                value={fromPeriod}
-                onChange={(e) => setFromPeriod(formatDateToNavy(e.target.value))} 
-                onFocus={(e) => { e.target.type = "date"; setFromPeriod(""); }}
-                className="navfit-input"
-              />
-            </div>
+      
+      {/* BLOCKS 14 & 15: PERIOD OF REPORT */}
+      <div className="navfit-cell" style={{ flex: 2, display: 'flex', flexDirection: 'column' }}>
+        <label>Period of Report</label>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          
+          {/* BLOCK 14: FROM */}
+          <div 
+            className={`navfit-cell ${getError('fromPeriod').isError ? "input-error" : ""}`} 
+            style={{ flex: 1, borderRight: 'none', padding: '0' }}
+          >
+            <label style={{ fontSize: '9px' }}>14. FROM:</label>
+            <input 
+              type={formData.fromPeriod ? "text" : "date"}
+              value={formData.fromPeriod}
+              className="navfit-input"
+              placeholder="YYMMM DD"
+              onChange={(e) => e.target.value && handleChange('fromPeriod', formatDateToNavy(e.target.value))} 
+              onFocus={(e) => { e.target.type = "date"; }}
+              onBlur={(e) => { if (formData.fromPeriod) e.target.type = "text"; }}
+            />
           </div>
-        </div>
 
+    {/* BLOCK 15: TO */}
+    <div 
+      className={`navfit-cell ${getError('toPeriod').isError ? "input-error" : ""}`} 
+      style={{ flex: 1, borderRight: 'none', padding: '0' }}
+    >
+      <label style={{ fontSize: '9px' }}>15. TO:</label>
+      <input 
+        type={formData.toPeriod ? "text" : "date"}
+        value={formData.toPeriod}
+        className="navfit-input"
+        placeholder="YYMMM DD"
+        onChange={(e) => e.target.value && handleChange('toPeriod', formatDateToNavy(e.target.value))} 
+        onFocus={(e) => { e.target.type = "date"; }}
+        onBlur={(e) => { if (formData.toPeriod) e.target.type = "text"; }}
+      />
+    </div>
+
+      {/* Shared Error Message for Date Logic */}
+      {(getError('fromPeriod').isError || getError('toPeriod').isError) && (
+        <div className="error-note" style={{ fontSize: '8px' }}>
+          {getError('fromPeriod').note || getError('toPeriod').note}
+        </div>
+      )}
+    </div>
+
+      </div>
       </div>
 
       {/* BLOCKS 16-21 */}
@@ -919,62 +361,87 @@ const handleSQLite = async () => {
               <input 
                 type="radio" 
                 value="Not Observed Report" 
-                checked={notObserved === 'Not Observed Report'} 
-                onChange={(e) => setNotObserved(e.target.value)} 
-              /> Not Observed Report
+                checked={formData.notObserved === 'Not Observed Report'} 
+                onChange={(e) => handleChange('notObserved', e.target.value)} 
+              />
             </label>
           </div>
         </div>
 
-        {/*BLOCKS 17-19*/}
-        <div className="navfit-cell" style={{ flex: 2.25, display: 'flex', flexDirection: 'column' }}>
-          <label>Type of Report</label>
-          <div className="radio-group">
-            <label className="radio-label">
-              <input 
-                type="radio" 
-                value="Regular" 
-                checked={reportType === 'Regular'} 
-                onChange={(e) => setReportType(e.target.value)} 
-              /> 17. Regular
-            </label>
-            <label className="radio-label">
-              <input 
-                type="radio" 
-                value="Concurrent" 
-                checked={reportType === 'Concurrent'} 
-                onChange={(e) => setReportType(e.target.value)} 
-              /> 18. Concurrent
-            </label>
-            <label className="radio-label">
-              <input 
-                type="radio" 
-                value="Ops Cdr" 
-                checked={reportType === 'Ops Cdr'} 
-                onChange={(e) => setReportType(e.target.value)} 
-              /> 19. Ops Cdr
-            </label>
-          </div>
+      {/* BLOCKS 17-19: TYPE OF REPORT */}
+      <div className="navfit-cell" style={{ flex: 2.25, display: 'flex', flexDirection: 'column' }}>
+        <label style={{ fontWeight: 'normal' }}>Type of Report</label>
+        <div className="radio-group" style={{ 
+          display: 'flex', 
+          flexDirection: 'row', 
+          flexWrap: 'nowrap', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginTop: '4px',
+          height: '100%' 
+        }}>
+          <label className="radio-label" style={{ fontSize: '9px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <input 
+              type="radio" 
+              name="reportType"
+              value="Regular" 
+              checked={formData.reportType === 'Regular'} 
+              onChange={(e) => handleChange('reportType', e.target.value)} 
+            /> 17. Regular
+          </label>
+          
+          <label className="radio-label" style={{ fontSize: '9px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <input 
+              type="radio" 
+              name="reportType"
+              value="Concurrent" 
+              checked={formData.reportType === 'Concurrent'} 
+              onChange={(e) => handleChange('reportType', e.target.value)} 
+            /> 18. Concurrent
+          </label>
+          
+          <label className="radio-label" style={{ fontSize: '9px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <input 
+              type="radio" 
+              name="reportType"
+              value="Ops Cdr" 
+              checked={formData.reportType === 'Ops Cdr'} 
+              onChange={(e) => handleChange('reportType', e.target.value)} 
+            /> 19. Ops Cdr
+          </label>
+        </div>
         </div>
 
-        {/*BLOCK 20*/}
-        <div className="navfit-cell" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <label>20. Physical Readiness</label>
-          <input 
-            type="text" 
-            value={physicalRead} 
-            onChange={(e) => setPhysicalRead(e.target.value.toUpperCase())} 
-            placeholder=""
-          />
-        </div>
+      {/* BLOCK 20: PHYSICAL READINESS */}
+      <div 
+        className={`navfit-cell ${getError('physicalRead').isError ? "input-error" : ""}`} 
+        style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+      >
+        <label>20. Physical Readiness</label>
+        <input 
+          className="navfit-input"
+          type="text" 
+          value={formData.physicalRead} 
+          // Auto-uppercase and limit to 4 characters (standard for these codes)
+          onChange={(e) => handleChange('physicalRead', e.target.value.toUpperCase().slice(0, 4))} 
+          placeholder="e.g., PFPF"
+        />
+
+        {/* Validator note for Navy codes */}
+        {getError('physicalRead').isError && (
+          <div className="error-note">
+            {getError('physicalRead').note}
+          </div>
+        )}
+      </div>
 
 
         {/*BLOCK 21*/}
         <div className="navfit-cell" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <label>21. Billet Subcategory (if any)</label>
           <select 
-            value={billetSub} 
-            onChange={(e) => setBilletSub(e.target.value)}
+            value={formData.billetSub} 
+            onChange={(e) => handleChange('billetSub', e.target.value)}
             className="dropdown-input"
           >
             <option value="">   </option>
@@ -1028,562 +495,506 @@ const handleSQLite = async () => {
       flexWrap: 'nowrap' 
     }}>
             
-      {/* BLOCK 22 */}
-      <div className="navfit-cell" style={{ flex: 2, minWidth: 0 }}>
-        <label style={{ fontSize: 'clamp(7px, 1vw, 10px)', letterSpacing: '-0.5px' }}>22. SENIOR (L, F MI)</label>
-        <input 
-          type="text" 
-          value={reportSenior} onChange={(e) => setReportSenior(e.target.value.toUpperCase())} 
-          className="navfit-input" 
-        />
-      </div>
+    {/* BLOCK 22: REPORTING SENIOR */}
+    <div 
+      className={`navfit-cell ${getError('reportSenior').isError ? "input-error" : ""}`} 
+      style={{ flex: 2, minWidth: 0 }}
+    >
+      <label style={{ fontSize: 'clamp(7px, 1vw, 10px)', letterSpacing: '-0.5px' }}>
+        22. SENIOR (L, F MI)
+      </label>
+      <input 
+        type="text" 
+        className="navfit-input" 
+        value={formData.reportSenior} 
+        // Auto-uppercase and sanitize to allow only letters, commas, spaces, and hyphens
+        onChange={(e) => {
+          const cleanValue = e.target.value.toUpperCase().replace(/[^A-Z,\s-]/g, '');
+          handleChange('reportSenior', cleanValue);
+        }} 
+        placeholder="SMITH, JOHN J"
+      />
 
-      {/* BLOCK 23 */}
-      <div className="navfit-cell" style={{ flex: 0.5, minWidth: 0 }}>
+      {/* Display the validation note (e.g., "Required Format: LAST, FIRST MI") */}
+      {getError('reportSenior').isError && (
+        <div className="error-note">
+          {getError('reportSenior').note}
+        </div>
+      )}
+    </div>
+
+      {/* BLOCK 23: SENIOR GRADE */}
+      <div 
+        className={`navfit-cell ${getError('reportGrade').isError ? "input-error" : ""}`} 
+        style={{ flex: 0.5, minWidth: 0 }}
+      >
         <label style={{ fontSize: 'clamp(7px, 1vw, 10px)' }}>23. GRADE</label>
         <input 
           type="text" 
-          value={reportGrade} 
-          onChange={(e) => setReportGrade(e.target.value.toUpperCase())} 
           className="navfit-input" 
+          value={formData.reportGrade} 
+          // Auto-uppercase to match Navy standards
+          onChange={(e) => handleChange('reportGrade', e.target.value.toUpperCase())} 
+          placeholder="e.g., CAPT"
         />
+
+        {/* Validator note for Senior Ranks */}
+        {getError('reportGrade').isError && (
+          <div className="error-note">
+            {getError('reportGrade').note}
+          </div>
+        )}
       </div>
 
-      {/* BLOCK 24 */}
-      <div className="navfit-cell" style={{ flex: 0.5, minWidth: 0 }}>
+      {/* BLOCK 24: SENIOR DESIGNATOR */}
+      <div 
+        className={`navfit-cell ${getError('reportDesig').isError ? "input-error" : ""}`} 
+        style={{ flex: 0.5, minWidth: 0 }}
+      >
         <label style={{ fontSize: 'clamp(7px, 1vw, 10px)' }}>24. DES</label>
         <input 
           type="text" 
-          value={reportDesig} 
-          onChange={(e) => setReportDesig(formatDesig(e.target.value))} 
           className="navfit-input" 
+          value={formData.reportDesig} 
+          // Force numeric-only input
+          onChange={(e) => handleChange('reportDesig', e.target.value.replace(/\D/g, ''))} 
+          placeholder="0000"
+          maxLength={4}
         />
+
+        {/* Validator note for 4-digit designator */}
+        {getError('reportDesig').isError && (
+          <div className="error-note">
+            {getError('reportDesig').note}
+          </div>
+        )}
       </div>
 
-      {/* BLOCK 25 */}
-      <div className="navfit-cell" style={{ flex: 1.5, minWidth: 0 }}>
+      {/* BLOCK 25: SENIOR TITLE */}
+      <div 
+        className={`navfit-cell ${getError('reportTitle').isError ? "input-error" : ""}`} 
+        style={{ flex: 1.5, minWidth: 0 }}
+      >
         <label style={{ fontSize: 'clamp(7px, 1vw, 10px)' }}>25. TITLE</label>
         <input 
           type="text" 
-          value={reportTitle} 
-          onChange={(e) => setReportTitle(formatTitle(e.target.value.toUpperCase()))} 
           className="navfit-input" 
+          value={formData.reportTitle} 
+          // Auto-uppercase and reasonable character limit for the PDF box
+          onChange={(e) => handleChange('reportTitle', e.target.value.toUpperCase().slice(0, 20))} 
+          placeholder="e.g., CO / OIC / XO"
         />
+
+        {/* Validator note for character limits */}
+        {getError('reportTitle').isError && (
+          <div className="error-note">
+            {getError('reportTitle').note}
+          </div>
+        )}
       </div>
 
-      {/* BLOCK 26 */}
-      <div className="navfit-cell" style={{ flex: 0.5, minWidth: 0 }}>
+      {/* BLOCK 26: SENIOR UIC */}
+      <div 
+        className={`navfit-cell ${getError('reportUIC').isError ? "input-error" : ""}`} 
+        style={{ flex: 0.5, minWidth: 0 }}
+      >
         <label style={{ fontSize: 'clamp(7px, 1vw, 10px)' }}>26. UIC</label>
-        <input type="text" value={reportUIC} onChange={(e) => setReportUIC(formatUIC(e.target.value))} className="navfit-input" />
+        <input 
+          type="text" 
+          className="navfit-input"
+          value={formData.reportUIC} 
+          // Force numeric-only input and limit to 6 digits
+          onChange={(e) => handleChange('reportUIC', e.target.value.replace(/\D/g, '').slice(0, 6))} 
+          placeholder="00000"
+        />
+
+        {/* Validator note for numeric length */}
+        {getError('reportUIC').isError && (
+          <div className="error-note">
+            {getError('reportUIC').note}
+          </div>
+        )}
       </div>
 
-      {/* BLOCK 27 */}
-      <div className="navfit-cell" style={{ flex: 1, borderRight: 'none', minWidth: 0 }}>
+      {/* BLOCK 27: SENIOR SSN */}
+      <div 
+        className={`navfit-cell ${getError('reportSSN').isError ? "input-error" : ""}`} 
+        style={{ flex: 1, borderRight: 'none', minWidth: 0 }}
+      >
         <label style={{ fontSize: 'clamp(7px, 1vw, 10px)' }}>27. SSN</label>
-        <input type="text" value={reportSSN} onChange={(e) => setReportSSN(formatSSN(e.target.value))} placeholder="000-00-0000" className="navfit-input" />
+        <input 
+          type="text" 
+          className="navfit-input" 
+          value={formData.reportSSN} 
+          placeholder="000-00-0000"
+          onChange={(e) => {
+            // 1. Strip all non-digits
+            let val = e.target.value.replace(/\D/g, '');
+            if (val.length > 9) val = val.slice(0, 9);
+            
+            // 2. Apply the SSN mask (000-00-0000)
+            const masked = val
+              .replace(/^(\d{3})(\d)/, '$1-$2')
+              .replace(/^(\d{3})-(\d{2})(\d)/, '$1-$2-$3');
+            
+            // 3. Update the CORRECT field in state
+            handleChange('reportSSN', masked);
+          }}
+        />
+
+        {/* Validator note for the 9-digit count */}
+        {getError('reportSSN').isError && (
+          <div className="error-note">
+            {getError('reportSSN').note}
+          </div>
+        )}
       </div>
     </div>
 
-    {/* BLOCK 28 */}
-    <div className="navfit-row" style={{ 
-      display: 'flex', 
-      flexDirection: 'column',
-      width: '100%', 
-      borderTop: '2px solid black', 
-      padding: '5px'
-    }}>
-      <label style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '4px' }}>
-        28. COMMAND EMPLOYMENT AND COMMAND ACHIEVEMENTS
-      </label>
-      
-      <textarea 
-        value={cmdEmployAch} 
-        onChange={(e) => setCmdEmployAch(e.target.value)} 
-        className="navfit-textarea" 
-        style={{ 
-          width: '100%', 
-          border: 'none',
-          outline: 'none',
-          resize: 'none',
-          backgroundColor: cmdEmployAch.length > FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH ? '#fff0f0' : 'transparent',
-          fontSize: '14px',
-          lineHeight: '1.2'
-        }}
-        rows="4"
-      />
-      
-      <div style={{ 
-        textAlign: 'right', 
-        fontSize: '9px', 
-        color: cmdEmployAch.length > FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH ? 'red' : '#666',
-        borderTop: '1px dashed #ccc',
-        marginTop: '2px'
-      }}>
-        {cmdEmployAch.length} / {FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH}
-      </div>
-    </div>
-
-      {/* BLOCK 29 */}
-      <div className="navfit-row" style={{ 
+    {/* BLOCK 28: COMMAND EMPLOYMENT AND ACHIEVEMENTS */}
+    <div className={`navfit-row ${getError('cmdEmployAch').isError ? "input-error" : ""}`} style={{ 
         display: 'flex', 
         flexDirection: 'column',
         width: '100%', 
-        borderTop: '2px solid black', 
-        padding: '5px',
-        position: 'relative'
+        borderTop: '1px solid black', 
+        padding: '5px'
       }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}></div>
-        <label style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '4px', maxWidth: '80%'}}>
-          29. Primary/Collateral/Watchstanding Duties (Enter Primary Duty Abbreviation in Box)
+        <label style={{ fontWeight: 'normal', fontSize: '10px', marginBottom: '4px' }}>
+          28. COMMAND EMPLOYMENT AND COMMAND ACHIEVEMENTS
         </label>
-
-      {/* Mini Box */}
-      <div style={{
-        border: '2px solid black',
-        width: '80px',
-        height: '30px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        marginTop: '-2px' // Aligns better with the top line
-      }}>
-        <span style={{ fontSize: '7px', fontWeight: 'bold' }}></span>
-        <input 
-          type="text"
-          maxLength="8"
-          style={{ 
-            width: '100%', 
-            border: 'none', 
-            textAlign: 'center', 
-            fontSize: '12px', 
-            outline: 'none',
-            textTransform: 'uppercase'
-          }}
-        />
-      </div>
-
+        
         <textarea 
-          value={duties} 
-          onChange={(e) => setDuties(e.target.value)} 
+          value={formData.cmdEmployAch} 
+          onChange={(e) => handleChange('cmdEmployAch', e.target.value)} 
           className="navfit-textarea" 
           style={{ 
             width: '100%', 
             border: 'none',
             outline: 'none',
             resize: 'none',
-            backgroundColor: duties.length > FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH ? '#fff0f0' : 'transparent',
+            backgroundColor: 'transparent', // Let the parent's input-error handle the color
             fontSize: '14px',
-            lineHeight: '1.2',
+            lineHeight: '1.2'
           }}
           rows="4"
+          placeholder="Enter command mission and achievements..."
         />
-        <div style={{ 
-          textAlign: 'right', 
-          fontSize: '9px', 
-          color: duties.length > FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH ? 'red' : '#666',
-          borderTop: '1px dashed #ccc',
-          marginTop: '2px'
-        }}>
-          {duties.length} / {FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH}
-        </div>
-      </div>
-
-    {/* BLOCKS 30-32 */}
-    <div className="navfit-row" style={{ 
-      display: 'flex', 
-      width: '100%', 
-      alignItems: 'stretch',
-      flexWrap: 'nowrap' 
-      }}>
-
-      <div className="navfit-cell" style={{ flex: 1, minWidth: 0 }}>
-        <label>For Mid-term Counseling Use (When completing FITREP,</label> 
-        <label>enter 30 and 31 from counseling worksheet, sign 32.)</label> 
-      </div>
-
-      {/* BLOCK 30 */}
-      <div className="navfit-cell" style={{ flex: 0.5, minWidth: 0 }}>
-        <label style={{ fontSize: 'clamp(7px, 1vw, 10px)', letterSpacing: '-0.5px' }}>30. Date Counseled</label>
-        <select 
-          value={dateCounseled} 
-          onChange={(e) => setDateCounseled(e.target.value)}
-          className="dropdown-input"
-        >
-          <option value="">  </option>
-          <option value="NOT REQ">NOT REQ</option>
-          <option value="NOT PERF">NOT PERF</option>
-        </select>
-      </div>
-    
-      {/* BLOCK 31 */}
-      <div className="navfit-cell" style={{ flex: 0.5, minWidth: 0 }}>
-          <label style={{ fontSize: 'clamp(7px, 1vw, 10px)' }}>31. Counselor</label>
-          <input 
-            type="text" 
-            value={counselor} 
-            onChange={(e) => setCounselor(e.target.value.toUpperCase())} 
-            style={{ borderColor: formatName(name) ? '#bf616a' : '#ccc', borderWidth: '2px' }}
-          />
-        </div>
-
-      {/* BLOCK 32 */}
-      <div className="navfit-cell" style={{ flex: 0.5, minWidth: 0 }}>
-          <label style={{ fontSize: 'clamp(7px, 1vw, 10px)' }}>32. Signature of Individual Counseled</label>
-          <input 
-            style={{ borderColor: formatName(name) ? '#bf616a' : '#ccc', borderWidth: '2px' }}
-          />
-        </div>
-      </div>
-
-    {/* PERFORMANCE SECTION HEADER (TITLE) */}
-    <div className="navfit-cell">
-      <label style={{ fontSize: '9px', display: 'block' }}>
-        PERFORMANCE TRAITS: 1.0 - Below standards progressing or UNSAT in any one standard; 2.0 - Does not yet meet all 3.0 standards; 3.0 - Meets all 3.0 standards; 4.0 - Exceeds most 3.0 standards; 5.0 - Meets overall criteria and most of the specific standards for 5.0. Standards are not all inclusive.
-      </label> 
-    </div>
-
-    {/* PERFORMANCE SECTION HEADER ROW */}
-    <div className="navfit-row" style={{ 
-      display: 'flex', 
-      width: '100%', 
-      alignItems: 'stretch',
-      flexWrap: 'nowrap',
-      borderBottom: '1px solid black',
-      borderTop: '2px solid black'
-    }}>
         
-      {/* Center all cells */}
-      {[
-        { flex: 1, labels: ['PERFORMANCE', 'TRAITS'] },
-        { flex: 1, labels: ['1.0*', 'Below Standards'] },
-        { flex: 0.5, labels: ['2.0', 'Pro-', 'gressing'] },
-        { flex: 1, labels: ['3.0', 'Meets Standards'] },
-        { flex: 0.5, labels: ['4.0', 'Above', 'Standards'] },
-        { flex: 1, labels: ['5.0', 'Greatly Exceeds Standards'] }
-      ].map((box, idx) => (
-        <div key={idx} className="navfit-cell" style={{ 
-          flex: box.flex, 
-          minWidth: 0,
+        <div style={{ 
           display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center', // Vertical centering
-          alignItems: 'center',     // Horizontal centering
-          textAlign: 'center',      // Text alignment centering
-          padding: '4px 2px'
+          justifyContent: 'space-between',
+          fontSize: '9px', 
+          borderTop: '1px dashed #ccc',
+          marginTop: '1px',
+          paddingTop: '1px'
         }}>
-          {box.labels.map((txt, i) => (
-            <label key={i} style={{ fontSize: '8px', fontWeight: 'bold', lineHeight: '1.1' }}>
-              {txt}
-            </label>
-          ))}
+          {/* Left side: Show the specific error note if over limit */}
+          <span style={{ color: 'red', fontWeight: 'normal' }}>
+            {getError('cmdEmployAch').isError ? getError('cmdEmployAch').note : ""}
+          </span>
+
+          {/* Right side: Character counter */}
+          <span style={{ color: getError('cmdEmployAch').isError ? 'red' : '#666' }}>
+            {formData.cmdEmployAch.length} / {FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH}
+          </span>
         </div>
-      ))}
+      </div>
+
+      {/* BLOCK 29: PRIMARY/COLLATERAL DUTIES */}
+      <div className={`navfit-row ${getError('duties').isError ? "input-error" : ""}`} style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        width: '100%', 
+        borderTop: '1px solid black', 
+        padding: '5px',
+        position: 'relative'
+      }}>
+        <label style={{ fontWeight: 'normal', fontSize: '10px', marginBottom: '4px', maxWidth: '85%' }}>
+          29. Primary/Collateral/Watchstanding Duties (Enter Primary Duty Abbreviation in Box)
+        </label>
+
+        {/* Mini Abbreviation Box */}
+        <div style={{
+          position: 'absolute',
+          left: '10px',
+          top: '20px',
+          border: `1px solid ${getError('primaryDuty').isError ? 'red' : 'black'}`,
+          width: '200px',
+          height: '25px',
+          display: 'flex',
+          alignItems: 'center',
+          backgroundColor: '#fff',
+          zIndex: 10
+        }}>
+          <input 
+            type="text"
+            maxLength="8"
+            value={formData.primaryDuty} 
+            onChange={(e) => handleChange('primaryDuty', e.target.value.toUpperCase())} 
+            style={{ 
+              width: '100%', 
+              border: 'none', 
+              textAlign: 'center', 
+              fontSize: '14px', 
+              fontWeight: 'normal',
+              outline: 'none'
+            }}
+          />
+        </div>
+
+        <textarea 
+          value={formData.duties} 
+          onChange={(e) => handleChange('duties', e.target.value)} 
+          className="navfit-textarea" 
+          style={{ 
+            width: '100%', 
+            border: 'none',
+            outline: 'none',
+            resize: 'none',
+            backgroundColor: 'transparent',
+            fontSize: '14px',
+            lineHeight: '1.2',
+            marginTop: '10px'
+          }}
+          rows="5"
+        />
+
+        <div style={{ 
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: '9px', 
+          borderTop: '1px dashed #ccc',
+          marginTop: '1px'
+        }}>
+          <span style={{ color: 'red', fontWeight: 'normal' }}>
+            {getError('duties').isError ? getError('duties').note : (getError('primaryDuty').isError ? getError('primaryDuty').note : "")}
+          </span>
+          <span style={{ color: getError('duties').isError ? 'red' : '#666' }}>
+            {formData.duties.length} / {FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH}
+          </span>
+        </div>
+      </div>
+
+      {/* ROW: BLOCKS 30-32 (COUNSELING) */}
+      <div className="navfit-row" style={{ display: 'flex', width: '100%', borderTop: '1px solid black' }}>
+        <div className="navfit-cell" style={{ flex: 1.5 }}>
+          <label style={{ fontSize: '9px' }}>For Mid-term Counseling Use (When completing FITREP, enter 30 and 31 from counseling worksheet, sign 32.)</label>
+        </div>
+
+        <div className="navfit-cell" style={{ flex: 0.5 }}>
+          <label style={{ fontSize: '9px' }}>30. Date Counseled</label>
+          <select 
+            className="navfit-input"
+            value={formData.dateCounseled} 
+            onChange={(e) => handleChange('dateCounseled', e.target.value)}
+          >
+            <option value=""></option>
+            <option value="NOT REQ">NOT REQ</option>
+            <option value="NOT PERF">NOT PERF</option>
+          </select>
+        </div>
+
+        <div className={`navfit-cell ${getError('counselor').isError ? "input-error" : ""}`} style={{ flex: 1 }}>
+          <label style={{ fontSize: '9px' }}>31. Counselor</label>
+          <input 
+            className="navfit-input"
+            value={formData.counselor} 
+            onChange={(e) => handleChange('counselor', e.target.value.toUpperCase())}
+            placeholder="LAST, FIRST MI"
+          />
+        </div>
+
+        <div className="navfit-cell" style={{ flex: 1, borderRight: 'none', backgroundColor: '#f9f9f9' }}>
+          <label style={{ fontSize: '9px' }}>32. Signature of Individual Counseled</label>
+          <div style={{ borderBottom: '1px solid black', marginTop: '12px', height: '15px' }}></div>
+        </div>
+      </div>
+
+    {/* PERFORMANCE TRAITS SECTION */}
+    <div className="navfit-row" style={{ display: 'flex', width: '100%', borderTop: '1px solid black' }}>
+        <div className="navfit-cell" style={{ flex: 1.5 }}>
+          <label style={{ fontSize: '9px' }}>PERFORMANCE TRAITS: 1.0 - Below standards/not progressing or UNSAT in any one standard; 2.0 - Does not yet meet all 3.0 standards; 3.0 - Meets all 3.0 standards; 4.0 - Exceeds most 3.0 standards; 5.0 - Meets overall criteria and most of the specific standards for 5.0.</label>
+        </div>
     </div>
 
+    {/* PERFORMANCE TRAITS HEADER ROW */}
+    <div className="navfit-row" style={{ 
+      display: 'flex', 
+      width: '100%', 
+      borderTop: '1px solid black', 
+      borderBottom: '1px solid black',
+      alignItems: 'stretch'
+    }}>
+      <div className="navfit-cell" style={{ flex: 1, minWidth: 0, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <label style={{ fontWeight: 'normal', fontSize: '10px' }}>PERFORMANCE TRAITS</label>
+      </div>
+      
+      <div className="navfit-cell" style={{ flex: 1, minWidth: 0, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <label style={{ fontWeight: 'normal', fontSize: '10px' }}>1.0*</label>
+        <label>Below Standards</label>
+      </div>
+      
+      <div className="navfit-cell" style={{ flex: 0.5, minWidth: 0, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <label style={{ fontWeight: 'normal', fontSize: '10px' }}>2.0</label>
+        <label>Progressing</label>
+      </div>
+      
+      <div className="navfit-cell" style={{ flex: 1, minWidth: 0, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <label style={{ fontWeight: 'normal', fontSize: '10px' }}>3.0</label>
+        <label>Meets Standards</label>
+      </div>
+      
+      <div className="navfit-cell" style={{ flex: 0.5, minWidth: 0, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <label style={{ fontWeight: 'normal', fontSize: '10px' }}>4.0</label>
+        <label>Above Standards</label>
+      </div>
+      
+      <div className="navfit-cell" style={{ flex: 1, minWidth: 0, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <label style={{ fontWeight: 'normal', fontSize: '10px' }}>5.0</label>
+        <label>Greatly Exceeds Standards</label>
+      </div>
+    </div>
+
+    <div className="performance-section">
+      
+      {/* Block 33 */}
       <PerformanceRow 
-        label="33. PROFESSIONAL EXPERTISE:" 
+        label="33. PROFESSIONAL EXPERTISE" 
         subLabel="Professional knowledge, proficiency, and qualifications."
-        name="proExpert" value={proExpert} setter={setProExpert} standards={TRAIT_STANDARDS.proExpert}
+        name="proExpert" 
+        value={formData.proExpert} 
+        setter={(val) => handleChange('proExpert', val)} 
+        standards={TRAIT_STANDARDS.proExpert} 
       />
+
+      {/* Block 34 */}
       <PerformanceRow 
-        label="34. COMMAND OR ORGANIZATIONAL CLIMATE / EQUAL OPPORTUNITY:" 
+        label="34. COMMAND OR ORGANIZATIONAL CLIMATE/EQUAL OPPORTUNITY:" 
         subLabel="Contributing to growth and development, human worth, community."
-        name="cmeo" value={cmeo} setter={setCmeo} standards={TRAIT_STANDARDS.cmeo}
+        name="cmeo" 
+        value={formData.cmeo} 
+        setter={(val) => handleChange('cmeo', val)} 
+        standards={TRAIT_STANDARDS.cmeo} 
       />
+
+      {/* Block 35 */}
       <PerformanceRow 
         label="35. MILITARY BEARING/CHARACTER:" 
         subLabel="Appearance, conduct, physical fitness, adherance to Navy Core Values."
-        name="bearing" value={bearing} setter={setBearing} standards={TRAIT_STANDARDS.bearing}
-      />
-      <PerformanceRow 
-        label="36. TEAMWORK:" 
-        subLabel="Contributions toward team building and team results."
-        name="teamwork" value={teamwork} setter={setTeamwork} standards={TRAIT_STANDARDS.teamwork}
-      />
-      <PerformanceRow 
-        label="37. MISSION ACCOMPLISHMENT AND INITIATIVE:" 
-        subLabel="Taking initiative, planning/prioritizing, achieving mission."
-        name="missAccomp" value={missAccomp} setter={setMissAccomp} standards={TRAIT_STANDARDS.missAccomp}
-      />
-      <PerformanceRow 
-        label="38. LEADERSHIP:" 
-        subLabel="Organizing, motivating and developing others to accomplish goals."
-        name="leadership" value={leadership} setter={setLeadership} standards={TRAIT_STANDARDS.leadership}
-      />
-      <PerformanceRow 
-        label="39. TACTICAL PERFORMANCE:" 
-        subLabel="(Warfare qualified officers only) Basic and tactical employment of weapons systems."
-        name="tactPerform" value={tactPerform} setter={setTactPerform} standards={TRAIT_STANDARDS.tactPerform}
+        name="bearing" 
+        value={formData.bearing} 
+        setter={(val) => handleChange('bearing', val)} 
+        standards={TRAIT_STANDARDS.bearing} 
       />
 
-    {/* BLOCK 40: CAREER MILESTONES */}
-    <div className="navfit-row" style={{ display: 'flex', borderTop: '2px solid black' }}>
-      
-      <div className="navfit-cell" style={{ flex: 2.5, fontSize: '8px', lineHeight: '1.1', borderRight: 'none' }}>
-        <label style={{ fontWeight: 'bold' }}>40. I recommend screening this individual for next career milestone(s) as follows: (maximum of two)</label>
-        <label>Recommendations may be for competitive schools or duty assignments such as: </label>
-        <label>SCP, Dept Head, XO, OIC, CO, Major Command, War College, PG School.</label>
-      </div> 
+      {/* Block 36 */}
+      <PerformanceRow 
+        label="36. TEAMWORK:"
+        subLabel="Contributions toward team building and team results." 
+        name="teamwork" 
+        value={formData.teamwork} 
+        setter={(val) => handleChange('teamwork', val)} 
+        standards={TRAIT_STANDARDS.teamwork} 
+      />
 
-      {/* MILESTONE 1 */}
-      <div className="navfit-cell" style={{ flex: 1, minWidth: 0}}>
-        <input 
-          type="text" 
-          value={milestoneOne} onChange={(e) => setMilestoneOne(e.target.value.toUpperCase())} 
-          className="navfit-input" 
-        />
-      </div>
+      {/* Block 37 */}
+      <PerformanceRow 
+        label="37. MISSION ACCOMPLISHMENT AND INITIATIVE:"
+        subLabel="Taking initiative, planning/prioritizing, achieving mission." 
+        name="missAccomp" 
+        value={formData.missAccomp} 
+        setter={(val) => handleChange('missAccomp', val)} 
+        standards={TRAIT_STANDARDS.missAccomp} 
+      />
 
-      {/* MILESTONE 2 */}
-      <div className="navfit-cell" style={{ flex: 1, minWidth: 0 }}>
-        <input 
-          type="text" 
-          value={milestoneTwo} onChange={(e) => setMilestoneTwo(e.target.value.toUpperCase())} 
-          className="navfit-input" 
-        />
-      </div>
+      {/* Block 38 */}
+      <PerformanceRow 
+        label="38. LEADERSHIP:"
+        subLabel="Organizing, motivating and developing others to accomplish goals." 
+        name="leadership" 
+        value={formData.leadership} 
+        setter={(val) => handleChange('leadership', val)} 
+        standards={TRAIT_STANDARDS.leadership} 
+      />
+
+      {/* Block 39 */}
+      <PerformanceRow 
+        label="39. TACTICAL PERFORMANCE:"
+        subLabel="(Warfare qualified officers only) Basic and tactical employment of weapons systems." 
+        name="tactPerform" 
+        value={formData.tactPerform} 
+        setter={(val) => handleChange('tactPerform', val)} 
+        standards={TRAIT_STANDARDS.tactPerform} 
+      />
     </div>
 
-    {/* BLOCK 41: COMMENTS */}
-    <div className="navfit-row" style={{ 
-      display: 'flex', 
-      flexDirection: 'column',
-      width: '100%', 
-      borderTop: '2px solid black', 
-      padding: '5px'
-    }}>
-      {/* HEADER WRAPPER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label style={{ fontWeight: 'bold', fontSize: '8px', textTransform: 'uppercase' }}>
-            41. COMMENTS ON PERFORMANCE: * All 1.0 marks, three 2.0 marks, and 2.0 marks in Block 34 must be specifically substantiated in comments.
-          </label>
-          <label style={{ fontSize: '7px', marginBottom: '5px' }}>
-            Font must be 10 or 12 Pitch (10 or 12 Point) only. Use upper and lower case.
-          </label>
+      {/* BLOCK 40: MILESTONES */}
+      <div className="navfit-row" style={{ display: 'flex', borderTop: '1px solid black' }}>
+        <div className="navfit-cell" style={{ flex: 2, fontSize: '8px' }}>
+          <label style={{ fontWeight: 'normal' }}>40. I recommend screening this individual for next career milestone(s) as follows: (maximum of two)</label>
+          <label>Recommendations may be for competitive schools or duty assignments such as:</label>
+          <label>SCP, Dept Head, XO, OIC, CO, Major Command, War College, PG School</label>
         </div>
-
-        {/* FONT SIZE DROPDOWN */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <label style={{ fontSize: '7px', fontWeight: 'bold' }}>FONT SIZE:</label>
-          <select 
-            value={commentFontSize} 
-            onChange={(e) => setCommentFontSize(e.target.value)}
-            style={{ fontSize: '9px', padding: '1px', cursor: 'pointer' }}
-          >
-            <option value="13.3px">10 pt</option>
-            <option value="16px">12 pt</option>
-          </select>
+        <div className={`navfit-cell ${getError('milestoneOne').isError ? "input-error" : ""}`} style={{ flex: 1 }}>
+          <input className="navfit-input" value={formData.milestoneOne} onChange={(e) => handleChange('milestoneOne', e.target.value.toUpperCase())} placeholder="Milestone 1" />
+        </div>
+        <div className={`navfit-cell ${getError('milestoneTwo').isError ? "input-error" : ""}`} style={{ flex: 1, borderRight: 'none' }}>
+          <input className="navfit-input" value={formData.milestoneTwo} onChange={(e) => handleChange('milestoneTwo', e.target.value.toUpperCase())} placeholder="Milestone 2" />
         </div>
       </div>
 
-      <textarea 
-        value={comments} 
-        onChange={(e) => setComments(e.target.value)} 
-        className="navfit-textarea" 
-        style={{ 
-          width: '100%', 
-          border: 'none',
-          outline: 'none',
-          resize: 'none',
-          backgroundColor: 'transparent',
-          fontFamily: '"Courier New", Courier, monospace',
-          /* DYNAMIC FONT SIZE APPLIED HERE */
-          fontSize: commentFontSize, 
-          lineHeight: '1.2'
-        }}
-        rows="10" 
-      />
-      
-      <div style={{ 
-        textAlign: 'right', 
-        fontSize: '9px', 
-        color: comments.length > FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH ? 'red' : '#666',
-        borderTop: '1px dashed #ccc',
-        marginTop: '2px'
-      }}>
-        {comments.length} / {FITREP_CONFIG.MAX_ACHIEVEMENT_LENGTH}
-      </div>
-    </div>
-
-    {/* BLOCKS 42-44 */}
-    {/* PROMOTION RECOMMENDATION SECTION HEADER ROW */}
-    <div style={{ display: 'flex', width: '100%', borderTop: '2px solid black', borderBottom: '2px solid black' }}>
-      
-      {/* Header, Blocks 42 and 43 */}
-      <div style={{ flex: 3, display: 'flex', flexDirection: 'column', borderRight: '1px solid black' }}>
-        
-        {/* ROW 1: HEADERS */}
-        <div className="navfit-row" style={{ display: 'flex', borderBottom: '1px solid black' }}>
-          {[
-            { flex: 0.2, labels: ['PROMOTION', 'RECOMMENDATION'] },
-            { flex: 0.2, labels: ['NOB'] },
-            { flex: 0.2, labels: ['SIGNIFICANT', 'PROBLEMS'] },
-            { flex: 0.2, labels: ['PROGRESSING'] },
-            { flex: 0.2, labels: ['PROMOTABLE'] },
-            { flex: 0.2, labels: ['MUST', 'PROMOTE'] },
-            { flex: 0.2, labels: ['EARLY', 'PROMOTE'] }
-          ].map((box, idx) => (
-            <div key={idx} className="navfit-cell" style={{ 
-              flex: box.flex, 
-              textAlign: 'center', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              borderRight: idx === 6 ? 'none' : '1px solid black' 
-            }}>
-              {box.labels.map((txt, i) => (
-                <label key={i} style={{ fontSize: '7px', fontWeight: 'bold' }}>{txt}</label>
-              ))}
-            </div>
-          ))}
+      {/* BLOCK 41: COMMENTS */}
+      <div className={`navfit-row ${getError('comments').isError ? "input-error" : ""}`} style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid black', padding: '5px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <label style={{ fontWeight: 'normal', fontSize: '9px' }}>41. COMMENTS ON PERFORMANCE</label>
+          <div style={{ fontSize: '9px' }}>
+            Font: <select value={formData.commentFontSize || "16px"} onChange={(e) => handleChange('commentFontSize', e.target.value)}>
+              <option value="13.3px">10 pt</option>
+              <option value="16px">12 pt</option>
+            </select>
+          </div>
         </div>
-
-        {/* ROW 2: BLOCK 42 */}
-        <PromoRec 
-          label="42." 
-          subLabel="INDIVIDUAL"
-          name="promotion" value={promotion} setter={setPromotion} 
-        />
-
-        {/* ROW 3: BLOCK 43 */}
-        <SumPromo
-          label="43."
-          subLabel="SUMMARY"
-          name="sumPromo" value={sumPromo} setter={setSumPromo}
-        />
-      </div>
-
-      {/* BLOCK 44 (Fills the entire vertical height) */}
-      <div className="navfit-cell" style={{ flex: 1.2, display: 'flex', flexDirection: 'column' }}>
-        <label style={{ fontSize: '8px', fontWeight: 'bold' }}>44. REPORTING SENIOR ADDRESS</label>
         <textarea 
-          value={seniorAddress} 
-          onChange={(e) => setSeniorAddress(e.target.value.toUpperCase())}
-          className="navfit-textarea"
-          style={{ 
-            flex: 1,
-            width: '100%',
-            fontSize: '11px', 
-            resize: 'none',
-            marginTop: '5px',
-            border: 'none',           
-            outline: 'none',          
-            background: 'transparent'
-          }}
+          value={formData.comments} 
+          onChange={(e) => handleChange('comments', e.target.value)} 
+          className="navfit-textarea" 
+          style={{ width: '100%', minHeight: '180px', fontSize: formData.commentFontSize || "16px", fontFamily: 'Courier New' }} 
         />
-      </div>
-    </div>
-
-{/* BLOCKS 45-46 & AVERAGES */}
-<div className="navfit-row" style={{ display: 'flex', width: '100%', borderTop: '1px solid black' }}>
-  
-  {/* LEFT SIDE: BLOCK 45 AND AVERAGES */}
-  {/* Flex 1.0 matches the first 5 columns of the promo grid (ends at Promotable) */}
-  <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', borderRight: '1px solid black' }}>
-    
-    {/* BLOCK 45 */}
-    <div className="navfit-cell" style={{ height: '60px', borderRight: 'none' }}>
-      <label>45. SIGNATURE OF MEMBER RATED</label>
-      <div style={{ flex: 1.2 }}></div>
-      <span className="date-label">Date:</span>
-    </div>
-
-    {/* TRAIT & GROUP AVERAGE ROW */}
-    <div style={{ display: 'flex', borderTop: '1px solid black', borderBottom: '1px solid black', height: '40px' }}>
-      {/* These split Block 45 exactly in half */}
-      <div className="navfit-cell" style={{ flex: .6, borderRight: '1px solid black', borderBottom: 'none'}}>
-        <label>Member Trait Average: </label>
-        <div style={{ fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }}>
-          {calculateTraitAverage()}
+        <div style={{ textAlign: 'right', fontSize: '9px', borderTop: '1px dashed #ccc' }}>
+          {formData.comments.length} / {FITREP_CONFIG.MAX_COMMENT_LENGTH || 1800}
         </div>
       </div>
-      <div className="navfit-cell" style={{ flex: .6, borderRight: 'none', borderBottom: 'none'}}>
-        <label>Summary Group Average: </label>
-        <div style={{ fontSize: '14px', fontWeight: 'bold', textAlign: 'center' }}>
-          {/* Logic to be added here */}
-          CALCULATE
+
+      {/* BLOCKS 42-44: PROMO GRID */}
+      <div style={{ display: 'flex', width: '100%', borderTop: '1px solid black', borderBottom: '1px solid black' }}>
+        <div style={{ flex: 3, display: 'flex', flexDirection: 'column', borderRight: '1px solid black' }}>
+          <PromoRec label="42." subLabel="INDIVIDUAL" name="promotion" value={formData.promotion} setter={(val) => handleChange('promotion', val)} />
+          <SumPromo label="43." subLabel="SUMMARY" name="sumPromo" value={formData.sumPromo} setter={(val) => handleChange('sumPromo', val)} />
+        </div>
+        <div className="navfit-cell" style={{ flex: 1.2 }}>
+          <label style={{ fontSize: '8px', fontWeight: 'normal' }}>44. SENIOR ADDRESS</label>
+          <textarea className="navfit-textarea" value={formData.seniorAddress} onChange={(e) => handleChange('seniorAddress', e.target.value.toUpperCase())} style={{ flex: 1, border: 'none' }} />
         </div>
       </div>
-    </div>
-  </div>
-
-  {/* RIGHT SIDE: BLOCK 46 */}
-  <div className="navfit-cell" style={{ flex: 1.15, display: 'flex', flexDirection: 'column', borderRight: 'none' }}>
-    <label>46. Signature of Individual evaluated. "I have seen this report, been apprised of my</label>
-    <label>performance, and understand my right to submit a system."</label>
-    
-    <div className="radio-group" style={{ 
-      display: 'flex', 
-      flexDirection: 'row', // Align items horizontally
-      justifyContent: 'flex-start', 
-      gap: '20px', // More space between the two options
-      marginTop: '8px' 
-    }}>
-
-    <label className="radio-label-right" style={{ fontSize: '9px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-      <span>I intend to submit a statement</span>
-      <input 
-        type="radio" 
-        className="square-radio"
-        value="statement" 
-        checked={statement === 'statement'} 
-        onChange={(e) => setStatement(e.target.value)} 
-      />
-    </label>
-
-    <label className="radio-label-right" style={{ fontSize: '9px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-      <span>I do not intend to submit a statement</span>
-      <input 
-        type="radio" 
-        className="square-radio"
-        value="no statement" 
-        checked={statement === 'no statement'} 
-        onChange={(e) => setStatement(e.target.value)} 
-      />
-    </label>
-    
-  </div>
-    <div style={{ flex: 1 }}></div>
-      <span className="date-label">Date:</span>
-    </div>
-  </div>
-
-{/* BLOCK 47: SIGNATURE OF REVIEWER */}
-<div className="navfit-row" style={{ display: 'flex', width: '100%', borderTop: '1px solid black', borderBottom: '1px solid black' }}>
-  <div className="navfit-cell" style={{ flex: 1 }}>
-      <label>47. Typed name, grade, command, UIC, and signature of Regular Reporting Senior on Concurrent Report</label>
-      <div style={{ flex: 1 }}></div>
-      <span className="date-label">Date:</span>
-  </div>
-</div>
 
       {/* ACTION BUTTONS */}
-      <div className="navfit-actions">
+      <div className="navfit-actions" style={{ padding: '10px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
         <button className="save-btn" onClick={handleSaveFitrep}>Save to Database</button>
-        <button className="pdf-btn">Generate PDF</button>
-        <button className="accdb-btn">Generate ACCDB</button>
-        <button className="sqlite-btn">Generate SQLite</button>
-        <button className="fileupload-btn">Upload File</button>
+        <button className="pdf-btn" onClick={handlePDFExport} disabled={!isSaved || hasUnsavedChanges}>Generate PDF</button>
+        <button className="accdb-btn" onClick={handleACCDBExport} disabled={!isSaved || hasUnsavedChanges}>Export ACCDB</button>
       </div>
 
       {/* MODAL OVERLAY */}
-      {/* MODAL OVERLAY */}
       {showModal && (
-        <div className="modal-overlay" style={{
-            position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', 
-            justifyContent: 'center', alignItems: 'center', zIndex: 1000
-        }}>
-          <div className="modal-content" style={{
-              background: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center'
-          }}>
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="modal-content" style={{ background: 'white', padding: '20px', borderRadius: '8px' }}>
             <h3 style={{ color: modalContent.isError ? 'red' : 'green' }}>{modalContent.title}</h3>
             <p>{modalContent.text}</p>
             <button onClick={() => setShowModal(false)}>Close</button>
           </div>
         </div>
       )}
-    </div>
+
+    </div> // This closes navfit-paper
   );
 }

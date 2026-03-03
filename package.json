@@ -9,10 +9,10 @@
   },
   "license": "ISC",
   "scripts": {
-    "install-all": "npm install && cd frontend2.1 && npm install && cd ../electron2.1 && npm install",
-    "build-ui": "cd frontend2.1 && npm run build",
+    "install-all": "npm install && npm install --prefix frontend2.1 && npm install --prefix backend2.1 && npm install --prefix electron2.1",
+    "build-ui": "npm run build --prefix frontend2.1",
     "start": "npm run build-ui && cd electron2.1 && npm start",
-    "clean": "rm -rf frontend2.1/dist && rm -rf frontend2.1/node_modules && rm -rf electron2.1/node_modules",
+    "clean": "node -e \"['frontend2.1/dist', 'electron2.1/frontend_build', 'frontend2.1/node_modules', 'backend2.1/node_modules', 'electron2.1/node_modules'].forEach(p => { if(fs.existsSync(p)) fs.rmSync(p, {recursive:true}) })\"",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
@@ -33,7 +33,16 @@
       {
         "from": "electron2.1/bin",
         "to": "bin",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "templates",
+        "to": "templates",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "files": [
@@ -43,12 +52,17 @@
       "node_modules/**/*",
       {
         "from": "frontend2.1/dist",
-        "to": "frontend_build",
-        "filter": ["**/*"]
+        "to": "electron2.1/frontend_build",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "maintainer": "Tucker Smith <tucker.smith@example.com>",
       "category": "Office"
     }

@@ -2,89 +2,66 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execFile } = require('child_process');
+const Database = require('better-sqlite3');
 
-// Logic Modules
-const FitRepData = require('../backend2.1/FitRepData');
-const FitRepMapper = require('../backend2.1/FitRepMapper');
-const PdfFiller = require('../backend2.1/PdfFiller');
+// --- 0. BACKEND MODULES (Colleague Update: Points to /src/) ---
+const FitRepData = require('../backend2.1/src/FitRepData');
+const FitRepMapper = require('../backend2.1/src/FitRepMapper');
+const PdfFiller = require('../backend2.1/src/PdfFiller');
 
 // --- 1. CONFIGURATION & PATHS ---
 const IS_PROD = app.isPackaged;
-const BASE_DIR = __dirname;
-const PROJECT_ROOT = BASE_DIR;
+const APP_ROOT = app.getAppPath(); 
 
-// Java Paths
-const JAVA_BIN = IS_PROD
-    ? path.join(process.resourcesPath, 'bin', 'jre', 'bin', 'java')
-    : path.join(BASE_DIR, 'bin', 'jre', 'bin', 'java');
+// For assets outside the ASAR (bin, templates)
+const EXTERNAL_ROOT = IS_PROD 
+    ? process.resourcesPath 
+    : APP_ROOT;
 
-const JAR_PATH = IS_PROD
-    ? path.join(process.resourcesPath, 'bin', 'app.jar')
-    : path.join(BASE_DIR, 'bin', 'app.jar');
+// Java Runtime & JAR
+const JAVA_BIN = path.join(EXTERNAL_ROOT, 'bin', 'jre', 'bin', 'java');
+const JAR_PATH = path.join(EXTERNAL_ROOT, 'bin', 'app.jar');
 
-// PDF Template Path
-const PDF_TEMPLATE = IS_PROD
-    ? path.join(process.resourcesPath, 'templates', 'navfit_fitrep_report_fillable_template.pdf')
-    : path.join(PROJECT_ROOT, 'templates', 'navfit_fitrep_report_fillable_template.pdf');
+// PDF Template
+const PDF_TEMPLATE = path.join(EXTERNAL_ROOT, 'templates', 'navfit_fitrep_report_fillable_template.pdf');
 
-// --- DYNAMIC USER PATHS ---
+// --- 2. DYNAMIC USER PATHS ---
 const DOCUMENTS_DIR = app.getPath('documents');
-const USER_OUTPUT_DIR = IS_PROD
-    ? path.join(DOCUMENTS_DIR, 'NavFit_Output')
-    : path.join(PROJECT_ROOT, 'output_files');
+const USER_OUTPUT_DIR = path.join(DOCUMENTS_DIR, 'NavFit_Output');
 
+// Internal Data (SQLite location)
 const INTERNAL_DATA_DIR = IS_PROD
     ? path.join(app.getPath('userData'), 'internal_data')
-    : path.join(PROJECT_ROOT, 'output_files');
+    : path.join(__dirname, 'output_files');
 
 const DEFAULTS = {
-    ACCDB_IN: path.join(PROJECT_ROOT, 'db_files', 'Murphy_example_FITREP.accdb'),
     SQLITE: path.join(INTERNAL_DATA_DIR, 'migrated_reports.db'),
-    ACCDB_OUT: path.join(USER_OUTPUT_DIR, 'Murphy_example_FITREP_NEW.accdb'),
-    PDF_OUT_DIR: USER_OUTPUT_DIR
+    ACCDB_OUT: path.join(USER_OUTPUT_DIR, 'Murphy_example_FITREP_NEW.accdb')
 };
 
 // Ensure directories exist immediately
-if (!fs.existsSync(USER_OUTPUT_DIR)) fs.mkdirSync(USER_OUTPUT_DIR, { recursive: true });
-if (!fs.existsSync(INTERNAL_DATA_DIR)) fs.mkdirSync(INTERNAL_DATA_DIR, { recursive: true });
+[USER_OUTPUT_DIR, INTERNAL_DATA_DIR].forEach(dir => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
 
-
-// --- 2. DATABASE LOGIC (Java Required) ---
-async function runExportLogic(source, target) {
-    const input = source || DEFAULTS.ACCDB_IN;
-    const output = target || DEFAULTS.SQLITE;
-    const outDir = path.dirname(output);
-    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-    return await runJava(['export', input, output]);
-}
-
-async function runImportLogic(source, target) {
-    const input = source || DEFAULTS.SQLITE;
-    const output = target || DEFAULTS.ACCDB_OUT;
-    const outDir = path.dirname(output);
-    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-    return await runJava(['import', input, output]);
-}
-
+// --- 3. CORE LOGIC FUNCTIONS ---
 function runJava(args) {
     return new Promise((resolve, reject) => {
+        if (!fs.existsSync(JAVA_BIN)) return reject(`Java not found at ${JAVA_BIN}`);
+        
         execFile(JAVA_BIN, ['-jar', JAR_PATH, ...args], (error, stdout, stderr) => {
-            if (error) {
-                reject(stderr || error.message);
-            } else {
-                resolve(stdout);
-            }
+            if (error) reject(stderr || error.message);
+            else resolve(stdout);
         });
     });
 }
 
-// --- 3. REPORT LOGIC (Pure JS) ---
 async function runReportLogic(inputData, pdfOutPath) {
-    let dataModel = inputData ? new FitRepData(inputData) : FitRepData.mock();
-    const safeName = (dataModel.FullName || "Draft_Report").replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const dataModel = inputData ? new FitRepData(inputData) : FitRepData.mock();
+    const safeName = (dataModel.FullName || "Draft").replace(/[^a-z0-9]/gi, '_').toLowerCase();
     
-    const finalPdfPath = pdfOutPath || path.join(DEFAULTS.PDF_OUT_DIR, `Report_${safeName}.pdf`);
-    const jsonTempPath = path.join(INTERNAL_DATA_DIR, `temp_data_${safeName}_${Date.now()}.json`);
+    const finalPdfPath = pdfOutPath || path.join(USER_OUTPUT_DIR, `Report_${safeName}.pdf`);
+    const jsonTempPath = path.join(INTERNAL_DATA_DIR, `temp_${safeName}.json`);
 
     const mapper = new FitRepMapper();
     mapper.mapDataModel(dataModel);
@@ -96,56 +73,80 @@ async function runReportLogic(inputData, pdfOutPath) {
     return finalPdfPath;
 }
 
+// --- 4. IPC HANDLERS (Colleague Integrated) ---
 
-// --- 4. IPC HANDLERS (The Listeners) ---
-ipcMain.handle('export-accdb', async (e, src, tgt) => {
+// Save to SQLite
+ipcMain.handle('save-fitrep', async (e, data) => {
     try {
-        await runExportLogic(src, tgt);
-        return { success: true, path: tgt || DEFAULTS.SQLITE };
-    } catch (err) { return { success: false, error: err.message }; }
+        const db = new Database(DEFAULTS.SQLITE);
+        // Clear old data for this demo/session
+        db.exec("DELETE FROM [Reports]; DELETE FROM [Folders]; DELETE FROM [Summary];");
+        
+        // Setup folder tree
+        db.prepare("INSERT INTO [Folders] (FolderName, FolderID, Parent, Active) VALUES (?, ?, ?, ?)")
+          .run('Root', 1, 0, 1);
+        
+        // Insert Report
+        const reportStmt = db.prepare(`
+            INSERT INTO [Reports] (Parent, ReportType, FullName, SSN, Active) 
+            VALUES ('a 1', @ReportType, @FullName, @SSN, 1)
+        `);
+        reportStmt.run(data);
+        
+        db.close();
+        return { success: true };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
 });
 
-ipcMain.handle('import-accdb', async (e, src, tgt) => {
+// Export SQLite back to ACCDB via Java
+ipcMain.handle('export-accdb', async () => {
     try {
-        await runImportLogic(src, tgt);
-        return { success: true, path: tgt || DEFAULTS.ACCDB_OUT };
-    } catch (err) { return { success: false, error: err.message }; }
+        await runJava(['import', DEFAULTS.SQLITE, DEFAULTS.ACCDB_OUT]);
+        return { success: true, path: DEFAULTS.ACCDB_OUT };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
 });
 
+// Generate PDF
 ipcMain.handle('generate-report', async (e, reportData) => {
     try {
         const outPath = await runReportLogic(reportData, null);
         return { success: true, path: outPath };
-    } catch (err) { return { success: false, error: err.message }; }
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
 });
-
 
 // --- 5. APP LIFECYCLE (GUI Setup) ---
 function createWindow() {
-    const mainWindow = new BrowserWindow({
+    const win = new BrowserWindow({
         width: 1200,
         height: 800,
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-            webSecurity: false,
-            // Make sure preload is attached so React can access the listeners!
-            preload: path.join(__dirname, 'preload.js') 
+            preload: path.join(__dirname, 'preload.js'), 
+            contextIsolation: true, 
+            nodeIntegration: false
         }
     });
 
-    // Use the Vite pathing we fixed earlier
-    const frontendPath = path.join(__dirname, 'frontend_build/index.html');
-    mainWindow.loadFile(frontendPath);
+    /**
+     * UI Path Logic:
+     * Packaged: app.asar/electron2.1/frontend_build/index.html
+     * Dev: app.asar/electron2.1/frontend_build/index.html (based on colleague merge)
+     */
+    const frontendPath = path.join(APP_ROOT, 'electron2.1', 'frontend_build', 'index.html');
+
+    if (!fs.existsSync(frontendPath)) {
+        console.error(`ERROR: Frontend not found at ${frontendPath}`);
+    }
+
+    win.loadFile(frontendPath).catch(err => console.error("Load Error:", err));
 }
 
-app.whenReady().then(() => {
-    createWindow();
-
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    });
-});
+app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

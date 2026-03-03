@@ -54,7 +54,7 @@ class FitRepMapper {
 
         // --- Block 28-29: Duties ---
         this.map("f1_28", data.Achievements);
-        this.map("f1_29a", data.PrimaryDuty);
+        this.map("f1_29a", data.PrimaryDuty); // Maps to the small Abbrev box
         this.map("f1_29b", data.Duties);
 
         // --- Block 30-31: Counseling ---
@@ -64,12 +64,12 @@ class FitRepMapper {
 
         // --- Block 33-39: Performance Traits (TEXT BOXES -> "X") ---
         // You specified these are Text Boxes, so we send "X" to the selected one.
-        this.mapTraitText("f1_33", data.PROF);
-        this.mapTraitText("f1_34", data.EO);
-        this.mapTraitText("f1_35", data.MIL);
-        this.mapTraitText("f1_36", data.TEAM);
-        this.mapTraitText("f1_37", data.MIS);
-        this.mapTraitText("f1_38", data.LEAD);
+        this.mapTraitText("f1_33", data.PROF); 
+        this.mapTraitText("f1_34", data.QUAL); // FIX: Ensure QUAL maps to Block 34
+        this.mapTraitText("f1_35", data.MIL); 
+        this.mapTraitText("f1_36", data.TEAM); 
+        this.mapTraitText("f1_37", data.MIS); 
+        this.mapTraitText("f1_38", data.LEAD); 
         this.mapTraitText("f1_39", data.TAC);
 
         // --- Block 40-41: Comments ---
