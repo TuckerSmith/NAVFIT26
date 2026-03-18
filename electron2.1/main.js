@@ -10,46 +10,58 @@ const PdfFiller = require('../backend2.1/PdfFiller');
 
 // --- 1. CONFIGURATION & PATHS ---
 const IS_PROD = app.isPackaged;
+
+// In Dev: This is /your/path/NAVFIT26/electron2.1
+// In Prod: This is /tmp/.mount_xxx/resources/app.asar/electron2.1
 const BASE_DIR = __dirname;
-const PROJECT_ROOT = BASE_DIR;
 
-// Java Paths
-const JAVA_BIN = IS_PROD
-    ? path.join(process.resourcesPath, 'bin', 'jre', 'bin', 'java')
-    : path.join(BASE_DIR, 'bin', 'jre', 'bin', 'java');
+// CRITICAL FIX: app.getAppPath() always points to the root of the app code
+// In Prod: /resources/app.asar
+// In Dev: /your/path/NAVFIT26
+const APP_ROOT = app.getAppPath();
 
-const JAR_PATH = IS_PROD
-    ? path.join(process.resourcesPath, 'bin', 'app.jar')
-    : path.join(BASE_DIR, 'bin', 'app.jar');
+// --- 2. ASSET PATHING (Java & Templates) ---
+// These live in the 'resources' folder next to the ASAR when packaged
+const EXTERNAL_RESOURCES = IS_PROD 
+    ? process.resourcesPath 
+    : APP_ROOT;
 
-// PDF Template Path
-const PDF_TEMPLATE = IS_PROD
-    ? path.join(process.resourcesPath, 'templates', 'navfit_fitrep_report_fillable_template.pdf')
-    : path.join(PROJECT_ROOT, 'templates', 'navfit_fitrep_report_fillable_template.pdf');
+const JAVA_BIN = path.join(EXTERNAL_RESOURCES, 'bin', 'jre', 'bin', 'java');
+const JAR_PATH = path.join(EXTERNAL_RESOURCES, 'bin', 'app.jar');
 
-// --- DYNAMIC USER PATHS ---
+// PDF & DB Files (Preserved stubs)
+const PDF_TEMPLATE = path.join(EXTERNAL_RESOURCES, 'templates', 'navfit_fitrep_report_fillable_template.pdf');
+
+// --- 3. DYNAMIC USER PATHS ---
 const DOCUMENTS_DIR = app.getPath('documents');
-const USER_OUTPUT_DIR = IS_PROD
-    ? path.join(DOCUMENTS_DIR, 'NavFit_Output')
-    : path.join(PROJECT_ROOT, 'output_files');
-
-const INTERNAL_DATA_DIR = IS_PROD
-    ? path.join(app.getPath('userData'), 'internal_data')
-    : path.join(PROJECT_ROOT, 'output_files');
-
-const DEFAULTS = {
-    ACCDB_IN: path.join(PROJECT_ROOT, 'db_files', 'Murphy_example_FITREP.accdb'),
-    SQLITE: path.join(INTERNAL_DATA_DIR, 'migrated_reports.db'),
-    ACCDB_OUT: path.join(USER_OUTPUT_DIR, 'Murphy_example_FITREP_NEW.accdb'),
-    PDF_OUT_DIR: USER_OUTPUT_DIR
-};
+const USER_OUTPUT_DIR = path.join(DOCUMENTS_DIR, 'NavFit_Output');
+const INTERNAL_DATA_DIR = path.join(app.getPath('userData'), 'internal_data');
 
 // Ensure directories exist immediately
 if (!fs.existsSync(USER_OUTPUT_DIR)) fs.mkdirSync(USER_OUTPUT_DIR, { recursive: true });
 if (!fs.existsSync(INTERNAL_DATA_DIR)) fs.mkdirSync(INTERNAL_DATA_DIR, { recursive: true });
 
+const DEFAULTS = {
+    ACCDB_IN: path.join(EXTERNAL_RESOURCES, 'db_files', 'Murphy_example_FITREP.accdb'),
+    SQLITE: path.join(INTERNAL_DATA_DIR, 'migrated_reports.db'),
+    ACCDB_OUT: path.join(USER_OUTPUT_DIR, 'Murphy_example_FITREP_NEW.accdb'),
+    PDF_OUT_DIR: USER_OUTPUT_DIR
+};
 
-// --- 2. DATABASE LOGIC (Java Required) ---
+// --- 4. JAVA & REPORT LOGIC ---
+function runJava(args) {
+    return new Promise((resolve, reject) => {
+        if (!fs.existsSync(JAVA_BIN)) return reject(`Java not found at ${JAVA_BIN}`);
+        execFile(JAVA_BIN, ['-jar', JAR_PATH, ...args], (error, stdout, stderr) => {
+            if (error) {
+                reject(stderr || error.message);
+            } else {
+                resolve(stdout);
+            }
+        });
+    });
+}
+
 async function runExportLogic(source, target) {
     const input = source || DEFAULTS.ACCDB_IN;
     const output = target || DEFAULTS.SQLITE;
@@ -66,19 +78,6 @@ async function runImportLogic(source, target) {
     return await runJava(['import', input, output]);
 }
 
-function runJava(args) {
-    return new Promise((resolve, reject) => {
-        execFile(JAVA_BIN, ['-jar', JAR_PATH, ...args], (error, stdout, stderr) => {
-            if (error) {
-                reject(stderr || error.message);
-            } else {
-                resolve(stdout);
-            }
-        });
-    });
-}
-
-// --- 3. REPORT LOGIC (Pure JS) ---
 async function runReportLogic(inputData, pdfOutPath) {
     let dataModel = inputData ? new FitRepData(inputData) : FitRepData.mock();
     const safeName = (dataModel.FullName || "Draft_Report").replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -96,8 +95,7 @@ async function runReportLogic(inputData, pdfOutPath) {
     return finalPdfPath;
 }
 
-
-// --- 4. IPC HANDLERS (The Listeners) ---
+// --- 5. IPC HANDLERS ---
 ipcMain.handle('export-accdb', async (e, src, tgt) => {
     try {
         await runExportLogic(src, tgt);
@@ -119,8 +117,7 @@ ipcMain.handle('generate-report', async (e, reportData) => {
     } catch (err) { return { success: false, error: err.message }; }
 });
 
-
-// --- 5. APP LIFECYCLE (GUI Setup) ---
+// --- 6. APP LIFECYCLE (GUI Setup) ---
 function createWindow() {
     const mainWindow = new BrowserWindow({
         width: 1200,
@@ -129,19 +126,28 @@ function createWindow() {
             nodeIntegration: true,
             contextIsolation: false,
             webSecurity: false,
-            // Make sure preload is attached so React can access the listeners!
-            preload: path.join(__dirname, 'preload.js') 
+            preload: path.join(BASE_DIR, 'preload.js') 
         }
     });
 
-    // Use the Vite pathing we fixed earlier
-    const frontendPath = path.join(__dirname, 'frontend_build/index.html');
-    mainWindow.loadFile(frontendPath);
+    /**
+     * UI PATHING FIX:
+     * We use app.getAppPath() to start from the root of the ASAR.
+     * Packaged structure: /resources/app.asar/frontend_build/index.html
+     * Dev structure: /NAVFIT26/frontend2.1/dist/index.html
+     */
+    const frontendPath = IS_PROD
+        ? path.join(APP_ROOT, 'frontend_build', 'index.html')
+        : path.join(APP_ROOT, 'frontend2.1', 'dist', 'index.html');
+
+    console.log(`Loading UI from: ${frontendPath}`);
+    mainWindow.loadFile(frontendPath).catch(err => {
+        console.error("Failed to load UI:", err);
+    });
 }
 
 app.whenReady().then(() => {
     createWindow();
-
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
