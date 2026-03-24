@@ -1,0 +1,49 @@
+{
+  "name": "NAVFIT26",
+  "version": "1.0.0",
+  "description": "Modern version of NAVFIT98A",
+  "main": "main.js",
+  "author": "Tate Murphy <jtatemurphy@gmail.com>",
+  "license": "ISC",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.Tate.NAVFIT26",
+    "productName": "NAVFIT26",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      {
+      	"from": "../frontend2.1/dist",
+      	"to": "frontend_build",
+      	"filter": ["**/*"]
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "bin",
+        "to": "bin",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.2.1",
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

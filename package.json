@@ -1,0 +1,56 @@
+{
+  "name": "navfit26-master",
+  "version": "1.0.0",
+  "description": "NAVFIT26 Master Launcher",
+  "main": "electron2.1/main.js",
+  "author": {
+    "name": "Tucker Smith",
+    "email": "tucker.smith@example.com"
+  },
+  "license": "ISC",
+  "scripts": {
+    "install-all": "npm install && cd frontend2.1 && npm install && cd ../electron2.1 && npm install",
+    "build-ui": "cd frontend2.1 && npm run build",
+    "start": "npm run build-ui && cd electron2.1 && npm start",
+    "clean": "rm -rf frontend2.1/dist && rm -rf frontend2.1/node_modules && rm -rf electron2.1/node_modules",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.navfit26.master",
+    "productName": "NAVFIT26",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "extraResources": [
+      {
+        "from": "electron2.1/bin",
+        "to": "bin",
+        "filter": ["**/*"]
+      }
+    ],
+    "files": [
+      "package.json",
+      "electron2.1/**/*",
+      "backend2.1/**/*",
+      "node_modules/**/*",
+      {
+        "from": "frontend2.1/dist",
+        "to": "frontend_build",
+        "filter": ["**/*"]
+      }
+    ],
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "maintainer": "Tucker Smith <tucker.smith@example.com>",
+      "category": "Office"
+    }
+  }
+}
