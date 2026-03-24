@@ -1,0 +1,122 @@
+:root {
+  --fitrep-master-size: 9px;
+  --error-red: #ff0000;
+  --error-bg: #fff0f0;
+}
+
+#form-container {
+  transform-origin: top center; /* Scale from the top middle */
+  transition: transform 0.1s ease-out; /* Smooth transition */
+}
+.navfit-paper {
+  width: 95vw; /* Instead of 850px */
+}
+
+.navfit-label {
+  font-size: 0.8vw; /* Text will shrink/grow with the window */
+}
+
+.navfit-input {
+  height: 2vw;
+  font-size: 1vw;
+}
+
+/* 1. GLOBAL RESET & BASE STYLES */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #f0f0f0;
+  margin: 0;
+  padding: 0;
+}
+
+/* 2. THE PAPER CONTAINER */
+.navfit-paper {
+  width: 95%;
+  max-width: 950px;
+  margin: 20px auto;
+  padding: 15px;
+  background: white;
+  border: 1px solid black;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Arial', 'Helvetica', sans-serif;
+}
+
+/* 3. TYPOGRAPHY & SCALING */
+/* Scale everything based on master size, but allow inputs to be readable */
+.navfit-paper label {
+  font-size: var(--fitrep-master-size);
+  font-weight: normal;
+  text-transform: none;
+  margin-bottom: 1px;
+}
+
+.navfit-paper input, 
+.navfit-paper textarea, 
+.navfit-paper select,
+.navfit-textarea {
+  font-family: "Courier New", Courier, monospace !important;
+  font-size: 11px; /* Slightly larger for readability */
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+}
+
+/* 4. GRID SYSTEM */
+.navfit-row {
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid black;
+}
+
+.navfit-cell {
+  border-right: 1px solid black;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  position: relative; 
+  min-height: 45px;
+  flex: 1;
+}
+
+.navfit-cell:last-child {
+  border-right: none;
+}
+
+.section-top {
+  border-top: 1px solid black !important;
+}
+
+/* 5. SPECIAL ELEMENTS */
+.date-label {
+  position: absolute;
+  bottom: 1px;
+  right: 110px;
+  font-size: 7px;
+  font-weight: normal;
+  pointer-events: none;
+}
+
+.blackout-pattern {
+  background: repeating-linear-gradient(45deg, #000, #000 2px, #333 1px, #333 4px);
+}
+
+/* 6. ERROR STATES (THE RED GLOW) */
+/* We make this selector very specific so it wins the "CSS War" */
+.navfit-paper .navfit-row .navfit-cell.input-error {
+  background-color: var(--error-bg) !important;
+  box-shadow: inset 0 0 0 1px var(--error-red) !important;
+  z-index: 5;
+}
+
+.error-note {
+  color: var(--error-red);
+  font-size: 8px;
+  font-weight: bold;
+  margin-top: 2px;
+} 
