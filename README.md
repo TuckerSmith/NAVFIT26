@@ -1,3 +1,5 @@
+# <b>No longer working. Migrated project to https://github.com/tatemurphy12/NAVFIT</b>
+
 # NAVFIT26 - Navy FITREP Management System #
 
 ## 1. Project Overview
